@@ -46,17 +46,20 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fcmService.initialize().then(() => {
       console.log('[App] Firebase Messaging inicializado');
     });
+    
+    // ✅ SOLICITAR PERMISO DE NOTIFICACIONES AL INICIAR
+    this.solicitarPermisosIniciales();
   }
 
   ngOnInit() {
-    // Registrar Service Worker al iniciar la app (independiente de la autenticación)
+    // Registrar Service Worker al iniciar la app
     this.registrarServiceWorker();
-    this.registrarFirebaseSW();  // ← Agrega esta línea
+    this.registrarFirebaseSW();
+    
     // Redirigir si el token es inválido después de la verificación
     this.authSubscription = this.authService.authLoading$.subscribe((loading) => {
       if (!loading) {
         if (this.authService.isAuthenticated()) {
-          // Usuario autenticado → iniciar monitoreo de sesión y solicitar permisos
           this.sessionService.iniciar();
           this.notificationService.solicitarPermiso();
         } else if (this.router.url !== '/login') {
@@ -65,6 +68,29 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  /**
+   * ✅ Solicitar permisos de notificación al iniciar la app
+   */
+  private solicitarPermisosIniciales(): void {
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+      // Verificar si ya tiene permiso
+      if (Notification.permission === 'default') {
+        // Esperar un poco para no molestar al usuario al inicio
+        setTimeout(() => {
+          Notification.requestPermission().then(permiso => {
+            console.log('[App] Permiso de notificaciones inicial:', permiso);
+          });
+        }, 3000);
+      }
+    }
+    
+    // ✅ Crear canal de notificaciones en Android (si es necesario)
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+      // Esto ayuda a que las notificaciones funcionen mejor en Android
+      console.log('[App] Notificaciones soportadas en este navegador');
+    }
   }
 
   private registrarServiceWorker(): void {
@@ -77,22 +103,22 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-private registrarFirebaseSW(): void {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js').then(reg => {
-      console.log('[App] ✅ Firebase SW registrado:', reg.scope);
-    }).catch(err => {
-      console.error('[App] ❌ Error registrando Firebase SW:', err);
-    });
+  private registrarFirebaseSW(): void {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/',
+        updateViaCache: 'none'
+      }).then(reg => {
+        console.log('[App] ✅ Firebase SW registrado:', reg.scope);
+      }).catch(err => {
+        console.error('[App] ❌ Error registrando Firebase SW:', err);
+      });
+    }
   }
-}
-
-
 
   ngOnDestroy() {
     this.authSubscription?.unsubscribe();
     this.sessionService.detener();
-    // Asegurarse de restaurar el scroll si el componente se destruye con el menú abierto
     if (this.menuOpen) {
       this.restoreBodyScroll();
     }
@@ -126,7 +152,6 @@ private registrarFirebaseSW(): void {
   private disableBodyScroll() {
     this.originalOverflow = document.body.style.overflow;
     this.renderer.setStyle(document.body, 'overflow', 'hidden');
-    // Guardar la posición del scroll
     const scrollY = window.scrollY;
     this.renderer.setStyle(document.body, 'position', 'fixed');
     this.renderer.setStyle(document.body, 'top', `-${scrollY}px`);
@@ -151,19 +176,19 @@ private registrarFirebaseSW(): void {
     }
   }
 
-@HostListener('window:resize')
-onResize() {
-  if (window.innerWidth > 768 && this.menuOpen) {
-    this.closeMenu();
+  @HostListener('window:resize')
+  onResize() {
+    if (window.innerWidth > 768 && this.menuOpen) {
+      this.closeMenu();
+    }
   }
-}
 
-@HostListener('document:keydown.escape')
-onEscapePress() {
-  if (this.menuOpen) {
-    this.closeMenu();
+  @HostListener('document:keydown.escape')
+  onEscapePress() {
+    if (this.menuOpen) {
+      this.closeMenu();
+    }
   }
-}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
