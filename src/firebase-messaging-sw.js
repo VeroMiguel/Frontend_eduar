@@ -23,82 +23,62 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[FCM SW] Mensaje en background recibido:', payload);
   
-  // Extraer información del payload
+  // ✅ Extraer información detallada del payload
   let titulo = payload.notification?.title || '📋 Lab.Rosas';
   let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
-  // ✅ Si el título es genérico, usar datos más específicos
-  if (titulo === '📋 Lab.Rosas' && payload.data?.title) {
-    titulo = payload.data.title;
+  // ✅ Si hay datos más específicos, usarlos
+  if (payload.data?.titulo_detallado) {
+    titulo = payload.data.titulo_detallado;
   }
-  if (cuerpo === 'Tienes una notificación pendiente' && payload.data?.body) {
-    cuerpo = payload.data.body;
+  if (payload.data?.cuerpo_detallado) {
+    cuerpo = payload.data.cuerpo_detallado;
   }
   
+  // ✅ Configurar la notificación SIN BOTONES
   const opciones = {
     body: cuerpo,
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    tag: payload.data?.tag || `fcm-${Date.now()}`,
+    tag: payload.data?.ordenId || `fcm-${Date.now()}`,
     data: {
       url: urlDestino,
+      ordenId: payload.data?.ordenId,
       title: titulo,
-      body: cuerpo,
-      ...payload.data
+      body: cuerpo
     },
     vibrate: [200, 100, 200],
     requireInteraction: true,
-    actions: [
-      { action: 'ver', title: '👁️ Ver orden' },
-      { action: 'cerrar', title: '✕ Cerrar' }
-    ]
+    silent: false,
+    // ✅ IMPORTANTE: Sin actions = sin botones
+    actions: []
   };
   
   self.registration.showNotification(titulo, opciones);
 });
 
-// ✅ Manejar click en notificación - VERSIÓN CORREGIDA
+// ✅ Manejar click en notificación - Abre la app directamente
 self.addEventListener('notificationclick', (event) => {
-  console.log('[FCM SW] Click en notificación. Acción:', event.action);
+  console.log('[FCM SW] Click en notificación');
   
   // Cerrar la notificación
   event.notification.close();
   
-  // Si el usuario hizo clic en "cerrar", no hacer nada
-  if (event.action === 'cerrar') {
-    console.log('[FCM SW] Usuario cerró la notificación');
-    return;
-  }
-  
-  // ✅ Obtener la URL de destino (funciona tanto para clic en cuerpo como en botón "ver")
+  // Obtener la URL de destino
   let urlDestino = '/ordenes';
-  
-  // Intentar obtener URL de los datos de la notificación
   if (event.notification.data && event.notification.data.url) {
     urlDestino = event.notification.data.url;
   }
   
-  // Intentar obtener del payload original (FCM_MSG)
-  if (event.notification.data && event.notification.data.FCM_MSG) {
-    const fcmMsg = event.notification.data.FCM_MSG;
-    if (fcmMsg.data && fcmMsg.data.url) {
-      urlDestino = fcmMsg.data.url;
-    } else if (fcmMsg.fcmOptions && fcmMsg.fcmOptions.link) {
-      urlDestino = fcmMsg.fcmOptions.link;
-    }
-  }
-  
   console.log('[FCM SW] Abriendo URL:', urlDestino);
   
-  // ✅ Abrir o enfocar la ventana (misma lógica para cualquier clic)
+  // Abrir o enfocar la ventana
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Buscar una ventana ya abierta
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            console.log('[FCM SW] Ventana encontrada, enfocando');
             client.focus();
             if (client.url !== urlDestino && 'navigate' in client) {
               client.navigate(urlDestino);
@@ -106,8 +86,6 @@ self.addEventListener('notificationclick', (event) => {
             return;
           }
         }
-        // No hay ventana abierta, crear una nueva
-        console.log('[FCM SW] Abriendo nueva ventana');
         if (clients.openWindow) {
           return clients.openWindow(urlDestino);
         }
@@ -115,4 +93,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('[FCM SW] ✅ Service Worker listo');
+console.log('[FCM SW] ✅ Service Worker listo (sin botones)');
