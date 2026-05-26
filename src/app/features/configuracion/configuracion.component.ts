@@ -199,14 +199,7 @@ async activarNotificacionesFcm(): Promise<void> {
     try {
         console.log('🔄 Iniciando renovación de token FCM...');
         
-        // ✅ 1. Primero, eliminar el token actual del backend
-        const tokenActual = this.notificationService.tokenFcm;
-        if (tokenActual) {
-            await this.notificationService.eliminarTokenEnBackend(tokenActual);
-            console.log('🗑️ Token antiguo eliminado del backend');
-        }
-        
-        // ✅ 2. Forzar obtención de nuevo token (ignorar caché)
+        // ✅ 1. Obtener nuevo token (forzar renovación)
         const token = await this.fcmService.obtenerToken(true);
         
         if (!token) {
@@ -215,11 +208,15 @@ async activarNotificacionesFcm(): Promise<void> {
         
         console.log('✅ Nuevo token obtenido:', token.substring(0, 30) + '...');
         
-        // ✅ 3. Registrar el nuevo token en el backend
-        await this.notificationService.registrarTokenEnBackend(token);
+        // ✅ 2. Registrar en backend (esperar respuesta)
+        const registrado = await this.notificationService.registrarTokenEnBackend(token);
         
-        // ✅ 4. Actualizar el token en el servicio de notificaciones
-        (this.notificationService as any).tokenFcm = token;
+        if (!registrado) {
+            throw new Error('No se pudo registrar el token en el servidor');
+        }
+        
+        // ✅ 3. Actualizar el token localmente
+        localStorage.setItem('fcm_device_token', token);
         
         Swal.fire({
             icon: 'success',
@@ -227,32 +224,26 @@ async activarNotificacionesFcm(): Promise<void> {
             html: `
                 <p>Las notificaciones push están activas en este dispositivo.</p>
                 <details style="margin-top:1rem;text-align:left">
-                    <summary style="cursor:pointer;color:#6366f1;font-size:0.85rem">Ver nuevo token FCM</summary>
-                    <code style="font-size:0.7rem;word-break:break-all;display:block;margin-top:0.5rem;padding:0.5rem;background:#f1f5f9;border-radius:6px">${token}</code>
+                    <summary style="cursor:pointer;color:#6366f1;font-size:0.85rem">Ver nuevo token</summary>
+                    <code style="font-size:0.7rem;word-break:break-all;display:block;margin-top:0.5rem;padding:0.5rem;background:#f1f5f9;border-radius:6px">${token.substring(0, 50)}...</code>
                 </details>
             `,
             confirmButtonColor: '#6366f1',
             confirmButtonText: 'Entendido'
         });
         
-        // ✅ 5. Recargar la página para asegurar que todo esté actualizado
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
-        
     } catch (error) {
         console.error('❌ Error renovando token:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudo renovar el token. Verifica tu conexión a internet y los permisos de notificaciones.',
+            text: error instanceof Error ? error.message : 'No se pudo renovar el token',
             confirmButtonColor: '#f43f5e'
         });
     } finally {
         this.solicitandoFcm = false;
     }
 }
-
   async probarNotificacion(): Promise<void> {
     const cfg: AppConfig = this.form.value as AppConfig;
 
