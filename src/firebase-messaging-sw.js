@@ -57,49 +57,49 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(titulo, opciones);
 });
 
-// ✅ Manejar click en notificación (ABRE LA APP) - VERSIÓN MEJORADA
+// ✅ Manejar click en notificación (ABRE LA APP) - VERSIÓN MEJORADA CON SOPORTE PARA BOTONES
 self.addEventListener('notificationclick', (event) => {
-  console.log('[FCM SW] Click en notificación:', event);
+  console.log('[FCM SW] Click en notificación. Acción:', event.action);
   
   // Cerrar la notificación inmediatamente
   event.notification.close();
   
-  // Detener la propagación si se hizo clic en un botón de acción
+  // ✅ Si se hizo clic en "cerrar", no hacemos nada más
   if (event.action === 'cerrar') {
+    console.log('[FCM SW] Usuario cerró la notificación');
     return;
   }
   
-  // --- MEJORA 2: Obtener la URL de los datos de la notificación ---
-  let urlDestino = '/ordenes'; // URL por defecto
+  // --- Obtener la URL de destino ---
+  let urlDestino = '/ordenes';
   
-  // 1. Intentar obtener la URL desde los datos de la notificación
+  // Intentar obtener la URL desde los datos de la notificación
   if (event.notification.data && event.notification.data.url) {
     urlDestino = event.notification.data.url;
+    console.log('[FCM SW] URL desde notification.data.url:', urlDestino);
   }
   
-  // 2. Si no, intentar obtenerla del payload original (FCM_MSG)
+  // Intentar obtener del payload original
   if (event.notification.data && event.notification.data.FCM_MSG) {
     const fcmMsg = event.notification.data.FCM_MSG;
     if (fcmMsg.data && fcmMsg.data.url) {
       urlDestino = fcmMsg.data.url;
-    } else if (fcmMsg.fcmOptions && fcmMsg.fcmOptions.link) {
-      urlDestino = fcmMsg.fcmOptions.link;
+      console.log('[FCM SW] URL desde FCM_MSG.data.url:', urlDestino);
     }
   }
   
-  console.log('[FCM SW] Abriendo URL:', urlDestino);
+  console.log('[FCM SW] Abriendo URL final:', urlDestino);
   
-  // --- MEJORA 3: Lógica más robusta para abrir/focalizar la ventana ---
-  // Esto sigue las mejores prácticas de `clients.openWindow()` [citation:5][citation:8]
+  // ✅ La lógica es la MISMA tanto para clic en cuerpo como en botón "ver"
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         // Buscar una ventana de nuestra app que ya esté abierta
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            // Si la encontramos, la traemos al frente
+            console.log('[FCM SW] Ventana encontrada, enfocando:', client.url);
             client.focus();
-            // Y si la URL no es la que queremos, la navegamos a la correcta
+            // Si la URL no es la que queremos, la navegamos
             if (client.url !== urlDestino && 'navigate' in client) {
               client.navigate(urlDestino);
             }
@@ -107,6 +107,7 @@ self.addEventListener('notificationclick', (event) => {
           }
         }
         // Si no hay ninguna ventana abierta, abrimos una nueva
+        console.log('[FCM SW] No se encontró ventana, abriendo una nueva');
         if (clients.openWindow) {
           return clients.openWindow(urlDestino);
         }
