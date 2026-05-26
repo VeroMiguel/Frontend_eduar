@@ -139,83 +139,93 @@ export class FirebaseMessagingService implements OnDestroy {
    * Solicita permiso de notificaciones y obtiene el token FCM del dispositivo.
    * Retorna el token o null si no se pudo obtener.
    */
-  async solicitarPermisoYObtenerToken(): Promise<string | null> {
+async solicitarPermisoYObtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.isSupported()) return null;
 
-    // Inicializar si no se hizo aún
     if (this.statusSubject.value === 'not-initialized') {
-      await this.initialize();
+        await this.initialize();
     }
 
     if (this.statusSubject.value !== 'ready') {
-      console.warn('[FCM] No está listo para obtener token. Estado:', this.statusSubject.value);
-      return null;
+        console.warn('[FCM] No está listo para obtener token. Estado:', this.statusSubject.value);
+        return null;
     }
 
-    // Solicitar permiso del navegador
     let permiso = Notification.permission;
     if (permiso === 'default') {
-      permiso = await Notification.requestPermission();
+        permiso = await Notification.requestPermission();
     }
 
     if (permiso !== 'granted') {
-      console.warn('[FCM] Permiso de notificaciones denegado');
-      this.statusSubject.next('no-permission');
-      return null;
+        console.warn('[FCM] Permiso de notificaciones denegado');
+        this.statusSubject.next('no-permission');
+        return null;
     }
 
-    return this.obtenerToken();
-  }
+    return this.obtenerToken(forceRefresh);
+}
 
-  /**
-   * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
-   */
-  async obtenerToken(): Promise<string | null> {
+ /**
+ * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
+ * @param forceRefresh Si es true, ignora la caché y obtiene un token nuevo
+ */
+async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.messaging) return null;
 
-    // Verificar caché
-    const tokenCacheado = this.getTokenFromCache();
-    if (tokenCacheado) {
-      this.tokenSubject.next(tokenCacheado);
-      return tokenCacheado;
+    // Verificar caché (solo si no se fuerza renovación)
+    if (!forceRefresh) {
+        const tokenCacheado = this.getTokenFromCache();
+        if (tokenCacheado) {
+            this.tokenSubject.next(tokenCacheado);
+            return tokenCacheado;
+        }
     }
 
     try {
-      const { getToken } = await import('firebase/messaging');
+        const { getToken } = await import('firebase/messaging');
 
-      // Registrar el SW de Firebase para background
-      let swRegistration: ServiceWorkerRegistration | undefined;
-      if ('serviceWorker' in navigator) {
-        try {
-          swRegistration = await navigator.serviceWorker.register(
-            '/firebase-messaging-sw.js',
-            { scope: '/firebase-messaging-sw.js' }
-          );
-          console.log('[FCM] SW de Firebase registrado');
-        } catch (swErr) {
-          console.warn('[FCM] No se pudo registrar SW de Firebase:', swErr);
+        // Registrar el SW de Firebase para background
+        let swRegistration: ServiceWorkerRegistration | undefined;
+        if ('serviceWorker' in navigator) {
+            try {
+                // ✅ Forzar registro actualizado del SW
+                await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+                    .then(reg => reg?.update());
+                swRegistration = await navigator.serviceWorker.register(
+                    '/firebase-messaging-sw.js',
+                    { scope: '/firebase-messaging-sw.js', updateViaCache: 'none' }
+                );
+                console.log('[FCM] SW de Firebase registrado/actualizado');
+            } catch (swErr) {
+                console.warn('[FCM] No se pudo registrar SW de Firebase:', swErr);
+            }
         }
-      }
 
-      const token = await getToken(this.messaging, {
-        vapidKey: environment.firebase.vapidKey,
-        serviceWorkerRegistration: swRegistration
-      });
+        // ✅ Si forceRefresh, eliminar caché previa
+        if (forceRefresh) {
+            localStorage.removeItem(FCM_TOKEN_KEY);
+            localStorage.removeItem(FCM_TOKEN_DATE_KEY);
+        }
 
-      if (token) {
-        this.saveTokenToCache(token);
-        this.tokenSubject.next(token);
-        console.log('[FCM] ✅ Token obtenido:', token.substring(0, 20) + '...');
-        return token;
-      } else {
-        console.warn('[FCM] No se pudo obtener token FCM');
-        return null;
-      }
+        const token = await getToken(this.messaging, {
+            vapidKey: environment.firebase.vapidKey,
+            serviceWorkerRegistration: swRegistration
+        });
+
+        if (token) {
+            this.saveTokenToCache(token);
+            this.tokenSubject.next(token);
+            console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
+            return token;
+        } else {
+            console.warn('[FCM] No se pudo obtener token FCM');
+            return null;
+        }
     } catch (error) {
-      console.error('[FCM] Error obteniendo token:', error);
-      return null;
+        console.error('[FCM] Error obteniendo token:', error);
+        return null;
     }
-  }
+}
 
   // ─── Getters de estado ────────────────────────────────────────────────────
 
