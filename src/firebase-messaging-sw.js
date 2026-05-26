@@ -23,9 +23,19 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[FCM SW] Mensaje en background recibido:', payload);
   
+  // --- MEJORA 1: Extraer la URL de forma más fiable ---
+  // Buscar la URL en diferentes lugares donde podría venir
+  let urlDestino = '/ordenes'; // URL por defecto
+  if (payload.data && payload.data.url) {
+    urlDestino = payload.data.url;
+  } else if (payload.fcmOptions && payload.fcmOptions.link) {
+    urlDestino = payload.fcmOptions.link;
+  } else if (payload.notification && payload.notification.click_action) {
+    urlDestino = payload.notification.click_action;
+  }
+
   const titulo = payload.notification?.title || '📋 Lab.Rosas';
   const cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
-  const urlDestino = payload.data?.url || '/ordenes';
   
   const opciones = {
     body: cuerpo,
@@ -33,7 +43,7 @@ messaging.onBackgroundMessage((payload) => {
     badge: '/favicon.ico',
     tag: payload.data?.tag || `fcm-${Date.now()}`,
     data: {
-      url: urlDestino,
+      url: urlDestino, // Guardar la URL en los datos de la notificación
       ...payload.data
     },
     vibrate: [200, 100, 200],
@@ -47,46 +57,56 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(titulo, opciones);
 });
 
-// ✅ Manejar click en notificación (ABRE LA APP)
+// ✅ Manejar click en notificación (ABRE LA APP) - VERSIÓN MEJORADA
 self.addEventListener('notificationclick', (event) => {
-  console.log('[FCM SW] Click en notificación:', event.notification.tag);
+  console.log('[FCM SW] Click en notificación:', event);
   
+  // Cerrar la notificación inmediatamente
   event.notification.close();
   
-  const accion = event.action;
-  if (accion === 'cerrar') return;
+  // Detener la propagación si se hizo clic en un botón de acción
+  if (event.action === 'cerrar') {
+    return;
+  }
   
-  // Obtener la URL de los datos de la notificación
-  let urlDestino = '/ordenes';
+  // --- MEJORA 2: Obtener la URL de los datos de la notificación ---
+  let urlDestino = '/ordenes'; // URL por defecto
+  
+  // 1. Intentar obtener la URL desde los datos de la notificación
   if (event.notification.data && event.notification.data.url) {
     urlDestino = event.notification.data.url;
   }
   
-  // También revisar en payload.data si existe
+  // 2. Si no, intentar obtenerla del payload original (FCM_MSG)
   if (event.notification.data && event.notification.data.FCM_MSG) {
     const fcmMsg = event.notification.data.FCM_MSG;
     if (fcmMsg.data && fcmMsg.data.url) {
       urlDestino = fcmMsg.data.url;
+    } else if (fcmMsg.fcmOptions && fcmMsg.fcmOptions.link) {
+      urlDestino = fcmMsg.fcmOptions.link;
     }
   }
   
   console.log('[FCM SW] Abriendo URL:', urlDestino);
   
+  // --- MEJORA 3: Lógica más robusta para abrir/focalizar la ventana ---
+  // Esto sigue las mejores prácticas de `clients.openWindow()` [citation:5][citation:8]
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Buscar una ventana ya abierta de la app
+        // Buscar una ventana de nuestra app que ya esté abierta
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
+            // Si la encontramos, la traemos al frente
             client.focus();
-            // Navegar a la URL dentro de la misma ventana
-            if ('navigate' in client) {
+            // Y si la URL no es la que queremos, la navegamos a la correcta
+            if (client.url !== urlDestino && 'navigate' in client) {
               client.navigate(urlDestino);
             }
             return;
           }
         }
-        // No hay ventana abierta, abrir una nueva
+        // Si no hay ninguna ventana abierta, abrimos una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlDestino);
         }
@@ -94,4 +114,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('[FCM SW] ✅ Service Worker de Firebase inicializado');
+console.log('[FCM SW] ✅ Service Worker de Firebase inicializado y listo para manejar clics');
