@@ -38,73 +38,24 @@ self.addEventListener('activate', (event) => {
 });
 
 // ─── Notificaciones Push ──────────────────────────────────────────────────────
+// ✅ IMPORTANTE: Este manejador DEBE pasar la notificación a Firebase SW
 self.addEventListener('push', (event) => {
-  console.log('[SW] Notificación push recibida');
-
-  let datos = {
-    titulo: '📋 Lab.Rosas',
-    cuerpo: 'Tienes una notificación pendiente',
-    icono: '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: 'labrosas-push',
-    url: '/ordenes'
-  };
-
-  if (event.data) {
-    try {
-      const payload = event.data.json();
-      datos = { ...datos, ...payload };
-    } catch {
-      datos.cuerpo = event.data.text() || datos.cuerpo;
-    }
-  }
-
-  const opciones = {
-    body: datos.cuerpo,
-    icon: datos.icono,
-    badge: datos.badge,
-    tag: datos.tag,
-    data: { url: datos.url },
-    vibrate: [200, 100, 200],
-    actions: [
-      { action: 'ver', title: '👁️ Ver' },
-      { action: 'cerrar', title: '✕ Cerrar' }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(datos.titulo, opciones)
-  );
+  console.log('[SW] Notificación push recibida, pasando a Firebase SW...');
+  
+  // ✅ No hacer nada aquí, dejar que firebase-messaging-sw.js maneje la notificación
+  // Solo asegurar que el evento no se pierda
+  event.waitUntil(Promise.resolve());
 });
 
 // ─── Click en notificación ────────────────────────────────────────────────────
+// ✅ Este manejador debe ser neutral para que Firebase SW tome el control
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Click en notificación:', event.notification.tag);
-
-  const accion = event.action;
+  console.log('[SW] Click en notificación, delegando a Firebase SW...');
+  
+  // ✅ No hacer nada aquí, dejar que firebase-messaging-sw.js maneje el clic
+  // Solo cerrar la notificación para que no se duplique
   event.notification.close();
-
-  if (accion === 'cerrar') return;
-
-  const urlDestino = event.notification.data?.url || '/ordenes';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes(self.location.origin)) {
-            client.focus();
-            if ('navigate' in client) {
-              return client.navigate(urlDestino);
-            }
-            return;
-          }
-        }
-        if (clients.openWindow) {
-          return clients.openWindow(urlDestino);
-        }
-      })
-  );
+  event.waitUntil(Promise.resolve());
 });
 
 // ─── Mensajes desde la app ───────────────────────────────────────────────────
