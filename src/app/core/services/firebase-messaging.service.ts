@@ -172,8 +172,24 @@ async solicitarPermisoYObtenerToken(forceRefresh: boolean = false): Promise<stri
 async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.messaging) return null;
 
-    // Verificar caché (solo si no se fuerza renovación)
-    if (!forceRefresh) {
+    // Si forceRefresh, eliminar caché
+    if (forceRefresh) {
+        console.log('🔄 Forzando renovación de token...');
+        localStorage.removeItem(FCM_TOKEN_KEY);
+        localStorage.removeItem(FCM_TOKEN_DATE_KEY);
+        this.tokenSubject.next(null);
+        
+        // ✅ Limpiar el Service Worker para que se registre de nuevo
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                if (registration.active?.scriptURL.includes('firebase-messaging')) {
+                    await registration.unregister();
+                    console.log('🗑️ Service Worker de Firebase desregistrado');
+                }
+            }
+        }
+    } else {
         const tokenCacheado = this.getTokenFromCache();
         if (tokenCacheado) {
             this.tokenSubject.next(tokenCacheado);
@@ -184,27 +200,23 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     try {
         const { getToken } = await import('firebase/messaging');
 
-        // Registrar el SW de Firebase para background
+        // Registrar el SW de Firebase
         let swRegistration: ServiceWorkerRegistration | undefined;
         if ('serviceWorker' in navigator) {
             try {
-                // ✅ Forzar registro actualizado del SW
-                await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
-                    .then(reg => reg?.update());
                 swRegistration = await navigator.serviceWorker.register(
                     '/firebase-messaging-sw.js',
-                    { scope: '/firebase-messaging-sw.js', updateViaCache: 'none' }
+                    { scope: '/', updateViaCache: 'none' }
                 );
-                console.log('[FCM] SW de Firebase registrado/actualizado');
+                console.log('[FCM] ✅ SW de Firebase registrado');
+                
+                // Esperar a que el SW esté activo
+                if (swRegistration.waiting) {
+                    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
             } catch (swErr) {
-                console.warn('[FCM] No se pudo registrar SW de Firebase:', swErr);
+                console.warn('[FCM] Error registrando SW:', swErr);
             }
-        }
-
-        // ✅ Si forceRefresh, eliminar caché previa
-        if (forceRefresh) {
-            localStorage.removeItem(FCM_TOKEN_KEY);
-            localStorage.removeItem(FCM_TOKEN_DATE_KEY);
         }
 
         const token = await getToken(this.messaging, {
@@ -218,7 +230,7 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
             console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
             return token;
         } else {
-            console.warn('[FCM] No se pudo obtener token FCM');
+            console.warn('[FCM] No se pudo obtener token');
             return null;
         }
     } catch (error) {

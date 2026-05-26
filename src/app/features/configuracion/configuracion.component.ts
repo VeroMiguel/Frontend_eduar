@@ -197,35 +197,55 @@ async activarNotificacionesFcm(): Promise<void> {
     this.solicitandoFcm = true;
 
     try {
-        // ✅ Forzar obtención de nuevo token (ignorar caché)
-        const token = await this.fcmService.obtenerToken(true); // true = forzar renovación
+        console.log('🔄 Iniciando renovación de token FCM...');
         
-        if (token) {
-            // ✅ Registrar el nuevo token en el backend
-            await this.notificationService.registrarTokenEnBackend(token);
-            
-            Swal.fire({
-                icon: 'success',
-                title: '✅ Token renovado',
-                html: `
-                    <p>Las notificaciones push están activas en este dispositivo.</p>
-                    <details style="margin-top:1rem;text-align:left">
-                        <summary style="cursor:pointer;color:#6366f1;font-size:0.85rem">Ver nuevo token FCM</summary>
-                        <code style="font-size:0.7rem;word-break:break-all;display:block;margin-top:0.5rem;padding:0.5rem;background:#f1f5f9;border-radius:6px">${token}</code>
-                    </details>
-                `,
-                confirmButtonColor: '#6366f1',
-                confirmButtonText: 'Entendido'
-            });
-        } else {
-            throw new Error('No se pudo obtener token');
+        // ✅ 1. Primero, eliminar el token actual del backend
+        const tokenActual = this.notificationService.tokenFcm;
+        if (tokenActual) {
+            await this.notificationService.eliminarTokenEnBackend(tokenActual);
+            console.log('🗑️ Token antiguo eliminado del backend');
         }
+        
+        // ✅ 2. Forzar obtención de nuevo token (ignorar caché)
+        const token = await this.fcmService.obtenerToken(true);
+        
+        if (!token) {
+            throw new Error('No se pudo obtener token de FCM');
+        }
+        
+        console.log('✅ Nuevo token obtenido:', token.substring(0, 30) + '...');
+        
+        // ✅ 3. Registrar el nuevo token en el backend
+        await this.notificationService.registrarTokenEnBackend(token);
+        
+        // ✅ 4. Actualizar el token en el servicio de notificaciones
+        (this.notificationService as any).tokenFcm = token;
+        
+        Swal.fire({
+            icon: 'success',
+            title: '✅ Token renovado correctamente',
+            html: `
+                <p>Las notificaciones push están activas en este dispositivo.</p>
+                <details style="margin-top:1rem;text-align:left">
+                    <summary style="cursor:pointer;color:#6366f1;font-size:0.85rem">Ver nuevo token FCM</summary>
+                    <code style="font-size:0.7rem;word-break:break-all;display:block;margin-top:0.5rem;padding:0.5rem;background:#f1f5f9;border-radius:6px">${token}</code>
+                </details>
+            `,
+            confirmButtonColor: '#6366f1',
+            confirmButtonText: 'Entendido'
+        });
+        
+        // ✅ 5. Recargar la página para asegurar que todo esté actualizado
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+        
     } catch (error) {
-        console.error('Error renovando token:', error);
+        console.error('❌ Error renovando token:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudo renovar el token. Verifica tu conexión y permisos.',
+            text: 'No se pudo renovar el token. Verifica tu conexión a internet y los permisos de notificaciones.',
             confirmButtonColor: '#f43f5e'
         });
     } finally {
