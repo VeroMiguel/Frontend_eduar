@@ -117,22 +117,6 @@ private getPlataforma(): string {
     return 'web';
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   ngOnDestroy(): void {
     this.configSub?.unsubscribe();
     this.fcmSub?.unsubscribe();

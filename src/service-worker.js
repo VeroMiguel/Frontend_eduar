@@ -1,96 +1,133 @@
 /**
  * service-worker.js — Lab.Rosas
- * Service Worker principal de la aplicación.
+ * Service Worker ÚNICO (fusiona caché + Firebase)
  */
 
-const CACHE_NAME = 'labrosas-v2';
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+
+const CACHE_NAME = 'labrosas-v3';
 const APP_SHELL = ['/'];
 
-// ─── Instalación ─────────────────────────────────────────────────────────────
+// ============================================
+// CONFIGURACIÓN DE FIREBASE
+// ============================================
+const firebaseConfig = {
+  apiKey: 'AIzaSyA4fQYr8Pj1N3eNsTkM90uMCKA495iQX_I',
+  authDomain: 'labrosasnotificaciones.firebaseapp.com',
+  projectId: 'labrosasnotificaciones',
+  storageBucket: 'labrosasnotificaciones.firebasestorage.app',
+  messagingSenderId: '385266856992',
+  appId: '1:385266856992:web:ee718300dcb112b6e23845'
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+// ============================================
+// MANEJADOR DE NOTIFICACIONES EN BACKGROUND (FCM)
+// ============================================
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Mensaje en background recibido:', payload);
+  
+  let titulo = payload.notification?.title || '📋 Lab.Rosas';
+  let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
+  let urlDestino = payload.data?.url || '/ordenes';
+  
+  // Usar datos detallados si existen
+  if (payload.data?.titulo_detallado) {
+    titulo = payload.data.titulo_detallado;
+  }
+  if (payload.data?.cuerpo_detallado) {
+    cuerpo = payload.data.cuerpo_detallado;
+  }
+  
+  const opciones = {
+    body: cuerpo,
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: payload.data?.ordenId || `fcm-${Date.now()}`,
+    data: { url: urlDestino, ...payload.data },
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
+    actions: [] // SIN BOTONES
+  };
+  
+  self.registration.showNotification(titulo, opciones);
+});
+
+// ============================================
+// CLICK EN NOTIFICACIÓN
+// ============================================
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Click en notificación');
+  event.notification.close();
+  
+  let urlDestino = '/ordenes';
+  if (event.notification.data && event.notification.data.url) {
+    urlDestino = event.notification.data.url;
+  }
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.focus();
+            if (client.url !== urlDestino && 'navigate' in client) {
+              client.navigate(urlDestino);
+            }
+            return;
+          }
+        }
+        if (clients.openWindow) {
+          return clients.openWindow(urlDestino);
+        }
+      })
+  );
+});
+
+// ============================================
+// CACHÉ PARA OFFLINE
+// ============================================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando Service Worker v2...');
+  console.log('[SW] Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(APP_SHELL).catch((err) => {
-        console.warn('[SW] Error cacheando app shell:', err);
+        console.warn('[SW] Error cacheando:', err);
       });
     })
   );
   self.skipWaiting();
 });
 
-// ─── Activación ───────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Service Worker v2 activado');
+  console.log('[SW] Activado');
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => {
-            console.log('[SW] Eliminando caché antiguo:', key);
-            return caches.delete(key);
-          })
+        keys.filter((key) => key !== CACHE_NAME).map((key) => {
+          console.log('[SW] Eliminando caché antiguo:', key);
+          return caches.delete(key);
+        })
       )
     )
   );
   self.clients.claim();
 });
 
-// ─── Notificaciones Push ──────────────────────────────────────────────────────
-// ✅ IMPORTANTE: Este manejador DEBE pasar la notificación a Firebase SW
-self.addEventListener('push', (event) => {
-  console.log('[SW] Notificación push recibida, pasando a Firebase SW...');
-  
-  // ✅ No hacer nada aquí, dejar que firebase-messaging-sw.js maneje la notificación
-  // Solo asegurar que el evento no se pierda
-  event.waitUntil(Promise.resolve());
-});
-
-// ─── Click en notificación ────────────────────────────────────────────────────
-// ✅ Este manejador debe ser neutral para que Firebase SW tome el control
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Click en notificación, delegando a Firebase SW...');
-  
-  // ✅ No hacer nada aquí, dejar que firebase-messaging-sw.js maneje el clic
-  // Solo cerrar la notificación para que no se duplique
-  event.notification.close();
-  event.waitUntil(Promise.resolve());
-});
-
-// ─── Mensajes desde la app ───────────────────────────────────────────────────
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-
-  if (event.data?.type === 'SHOW_NOTIFICATION') {
-    const { titulo, cuerpo, tag, url } = event.data;
-    self.registration.showNotification(titulo || '📋 Lab.Rosas', {
-      body: cuerpo || '',
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      tag: tag || `sw-notif-${Date.now()}`,
-      data: { url: url || '/ordenes' },
-      vibrate: [150, 80, 150]
-    });
-  }
-});
-
-// ─── Fetch ────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
-  // No interceptar peticiones a la API ni a Firebase
+  
+  // No cachear API ni Firebase
   if (url.pathname.startsWith('/api')) return;
   if (url.hostname.includes('firebase') || url.hostname.includes('google')) return;
-  if (url.pathname === '/firebase-messaging-sw.js') return;
   if (event.request.method !== 'GET') return;
-
+  
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cachear respuestas exitosas de assets estáticos
         if (response.ok && (
           url.pathname.endsWith('.js') ||
           url.pathname.endsWith('.css') ||
@@ -114,3 +151,5 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+console.log('[SW] ✅ Service Worker unificado listo');
