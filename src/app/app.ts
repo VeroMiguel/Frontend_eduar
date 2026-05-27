@@ -54,7 +54,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Registrar Service Worker al iniciar la app
     this.registrarServiceWorker();
-    this.registrarFirebaseSW();
+  // this.registrarFirebaseSW();  // ❌ ELIMINAR o COMENTAR esta línea
     
     // Redirigir si el token es inválido después de la verificación
     this.authSubscription = this.authService.authLoading$.subscribe((loading) => {
@@ -103,18 +103,19 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private registrarFirebaseSW(): void {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/',
-        updateViaCache: 'none'
-      }).then(reg => {
-        console.log('[App] ✅ Firebase SW registrado:', reg.scope);
-      }).catch(err => {
-        console.error('[App] ❌ Error registrando Firebase SW:', err);
-      });
-    }
-  }
+// ❌ ELIMINAR COMPLETAMENTE este método
+// private registrarFirebaseSW(): void {
+//     if ('serviceWorker' in navigator) {
+//         navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+//             scope: '/',
+//             updateViaCache: 'none'
+//         }).then(reg => {
+//             console.log('[App] ✅ Firebase SW registrado:', reg.scope);
+//         }).catch(err => {
+//             console.error('[App] ❌ Error registrando Firebase SW:', err);
+//         });
+//     }
+// }
 
   ngOnDestroy() {
     this.authSubscription?.unsubscribe();
