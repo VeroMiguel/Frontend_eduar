@@ -205,7 +205,7 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
         if ('serviceWorker' in navigator) {
             try {
                 swRegistration = await navigator.serviceWorker.register(
-                    '/firebase-messaging-sw.js',
+                      '/service-worker.js',  // ← Cambiar de firebase-messaging-sw.js a service-worker.js
                     { scope: '/', updateViaCache: 'none' }
                 );
                 console.log('[FCM] ✅ SW de Firebase registrado');
