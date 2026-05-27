@@ -24,17 +24,30 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// ✅ Variable para evitar notificaciones duplicadas
+let ultimaNotificacion = null;
+
 // ============================================
 // MANEJADOR DE NOTIFICACIONES EN BACKGROUND (FCM)
 // ============================================
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Mensaje en background recibido:', payload);
   
+  // ✅ Prevenir duplicados (misma notificación en menos de 2 segundos)
+  const ahora = Date.now();
+  const notificacionId = payload.data?.ordenId || payload.notification?.title;
+  
+  if (ultimaNotificacion === notificacionId && (ahora - (payload.timestamp || 0) < 2000)) {
+    console.log('[SW] Notificación duplicada ignorada');
+    return;
+  }
+  ultimaNotificacion = notificacionId;
+  
   let titulo = payload.notification?.title || '📋 Lab.Rosas';
   let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
-  // Usar datos detallados si existen
+  // ✅ Usar datos detallados de android.notification si existen
   if (payload.data?.titulo_detallado) {
     titulo = payload.data.titulo_detallado;
   }
@@ -47,7 +60,11 @@ messaging.onBackgroundMessage((payload) => {
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     tag: payload.data?.ordenId || `fcm-${Date.now()}`,
-    data: { url: urlDestino, ...payload.data },
+    data: { 
+      url: urlDestino, 
+      ...payload.data,
+      timestamp: ahora 
+    },
     vibrate: [200, 100, 200],
     requireInteraction: true,
     actions: [] // SIN BOTONES
