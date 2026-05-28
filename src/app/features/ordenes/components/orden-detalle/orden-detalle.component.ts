@@ -334,14 +334,25 @@ subirImagenReferencia(file: File) {
       }
     }).then((result) => {
       if (result.isConfirmed) {
+        // ✅ LOG: Verificar el orden_id antes de enviar
+        const ordenId = this.orden.id;
+        console.log('📝 [DEBUG] Enviando pago con orden_id:', ordenId, 'tipo:', typeof ordenId);
+        console.log('📝 [DEBUG] Datos del pago:', {
+          orden_id: ordenId,
+          monto: result.value.monto,
+          metodo_pago: result.value.metodo_pago,
+          referencia: result.value.referencia
+        });
+        
         this.subscriptions.push(
           this.pagoService.registrarPago({
-            orden_id: this.orden.id,
+            orden_id: Number(ordenId), // ✅ Asegurar que sea número
             monto: result.value.monto,
             metodo_pago: result.value.metodo_pago,
             referencia: result.value.referencia
           }).subscribe({
-            next: () => {
+            next: (response) => {
+              console.log('✅ [DEBUG] Pago registrado exitosamente:', response);
               Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',
@@ -352,7 +363,12 @@ subirImagenReferencia(file: File) {
               this.cargarOrden(this.orden.id);
             },
             error: (error) => {
-              console.error('Error registrando pago:', error);
+              console.error('❌ [DEBUG] Error registrando pago:', error);
+              console.error('❌ [DEBUG] Detalles del error:', {
+                status: error.status,
+                message: error.message,
+                error: error.error
+              });
               if (error.error && error.error.error) {
                 Swal.fire('Error', error.error.error, 'error');
               } else {
