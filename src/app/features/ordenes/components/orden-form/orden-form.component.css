@@ -217,7 +217,7 @@
 }
 
 .btn-upload {
-    background: white;
+    background: var(--surf, #ffffff);
     color: var(--txt, #0f172a);
     border: 2px solid var(--bor, #e2e8f0);
     padding: 10px 20px;
