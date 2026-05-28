@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, forwardRef, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { ImagenPipe } from '../../pipes/imagen.pipe';
@@ -9,8 +9,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
   imports: [CommonModule, FormsModule, ImagenPipe],
   template: `
     <div class="searchable-select">
-      <!-- Campo de visualización/búsqueda -->
-      <div class="select-display" [class.open]="abierto" (click)="toggleDropdown()">
+      <div class="select-display" [class.open]="abierto" (click)="abrirDropdown()">
         <input
           type="text"
           [(ngModel)]="textoBusqueda"
@@ -25,7 +24,6 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
         <i class="fas fa-chevron-down" [class.rotated]="abierto"></i>
       </div>
 
-      <!-- Dropdown con opciones -->
       <div class="select-dropdown" *ngIf="abierto" (mousedown)="$event.preventDefault()">
         <div class="dropdown-header">
           <span class="result-count">{{ opcionesFiltradas.length }} resultados</span>
@@ -35,7 +33,6 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
         </div>
         
         <div class="dropdown-options">
-          <!-- Opción "Todos" si es para filtros -->
           <div *ngIf="incluirTodos" 
                class="dropdown-option" 
                [class.selected]="!valorSeleccionado"
@@ -44,7 +41,6 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
             <i *ngIf="!valorSeleccionado" class="fas fa-check"></i>
           </div>
 
-          <!-- Opciones filtradas -->
           <div *ngFor="let opcion of opcionesFiltradas" 
                class="dropdown-option" 
                [class.selected]="valorSeleccionado?.id === opcion.id"
@@ -58,7 +54,6 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
             <i *ngIf="valorSeleccionado?.id === opcion.id" class="fas fa-check"></i>
           </div>
 
-          <!-- Mensaje si no hay resultados -->
           <div *ngIf="opcionesFiltradas.length === 0" class="dropdown-empty">
             No se encontraron resultados
           </div>
@@ -81,10 +76,10 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       width: 100%;
       padding: 12px;
       padding-right: 35px;
-      border: 1px solid var(--border-color, #e2e8f0);
+      border: 1px solid var(--bor, #e2e8f0);
       border-radius: 12px;
-      background: var(--input-bg, #f8fafc);
-      color: var(--text-primary, #0f172a);
+      background: var(--in, #f8fafc);
+      color: var(--txt, #0f172a);
       font-size: 1rem;
       cursor: pointer;
       transition: all 0.2s;
@@ -107,7 +102,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       right: 12px;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--text-secondary, #64748b);
+      color: var(--mut, #64748b);
       transition: transform 0.2s;
       pointer-events: none;
     }
@@ -122,8 +117,8 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       left: 0;
       right: 0;
       max-height: 350px;
-      background: var(--bg-primary, #ffffff);
-      border: 1px solid var(--border-color, #e2e8f0);
+      background: var(--surf, #ffffff);
+      border: 1px solid var(--bor, #e2e8f0);
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
       z-index: 1000;
@@ -145,23 +140,23 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
 
     .dropdown-header {
       padding: 10px 15px;
-      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      border-bottom: 1px solid var(--bor, #e2e8f0);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--bg-primary, #ffffff);
+      background: var(--surf, #ffffff);
       border-radius: 12px 12px 0 0;
     }
 
     .result-count {
       font-size: 0.875rem;
-      color: var(--text-secondary, #64748b);
+      color: var(--mut, #64748b);
     }
 
     .btn-clear-search {
       background: none;
       border: none;
-      color: var(--text-secondary, #64748b);
+      color: var(--mut, #64748b);
       cursor: pointer;
       padding: 4px 8px;
       border-radius: 4px;
@@ -169,8 +164,8 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
     }
 
     .btn-clear-search:hover {
-      background: var(--hover-bg, #f1f5f9);
-      color: var(--text-primary, #0f172a);
+      background: var(--in, #f1f5f9);
+      color: var(--txt, #0f172a);
     }
 
     .dropdown-options {
@@ -190,7 +185,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
     }
 
     .dropdown-option:hover {
-      background: var(--hover-bg, #f1f5f9);
+      background: var(--in, #f1f5f9);
       border-left-color: #6366f1;
     }
 
@@ -223,33 +218,50 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
 
     .option-text {
       font-weight: 500;
-    }
-
-    .option-detail {
-      font-size: 0.875rem;
-      color: var(--text-secondary, #64748b);
-      margin-left: 5px;
+      color: var(--txt, #0f172a);
     }
 
     .dropdown-empty {
       padding: 20px;
       text-align: center;
-      color: var(--text-secondary, #64748b);
+      color: var(--mut, #64748b);
       font-style: italic;
     }
 
+    /* ✅ ESTILOS PARA TEMA OSCURO - CORREGIDOS */
     [data-theme="dark"] .select-dropdown {
       background: #1e293b;
       border-color: #334155;
+    }
+
+    [data-theme="dark"] .dropdown-header {
+      background: #1e293b;
+      border-color: #334155;
+    }
+
+    [data-theme="dark"] .dropdown-option {
+      color: #f1f5f9;
     }
 
     [data-theme="dark"] .dropdown-option:hover {
       background: #334155;
     }
 
-    [data-theme="dark"] .dropdown-header {
-      background: #1e293b;
-      border-color: #334155;
+    [data-theme="dark"] .dropdown-option.selected {
+      background: rgba(99,102,241,0.2);
+    }
+
+    [data-theme="dark"] .option-text {
+      color: #f1f5f9;
+    }
+
+    [data-theme="dark"] .result-count {
+      color: #94a3b8;
+    }
+
+    [data-theme="dark"] .btn-clear-search:hover {
+      background: #334155;
+      color: #f1f5f9;
     }
   `],
   providers: [
@@ -269,6 +281,8 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   @Input() disabled: boolean = false;
 
   @Output() selectionChange = new EventEmitter<any>();
+
+  @ViewChild('inputElement') inputElement!: ElementRef<HTMLInputElement>;
 
   valorSeleccionado: any = null;
   textoBusqueda: string = '';
@@ -304,20 +318,12 @@ export class SearchableSelectComponent implements ControlValueAccessor {
       const busqueda = this.textoBusqueda.toLowerCase();
       this.opcionesFiltradas = this.opciones.filter(opcion => 
         opcion.nombre.toLowerCase().includes(busqueda) ||
-        (opcion.telefono_whatsapp && opcion.telefono_whatsapp.includes(busqueda))
+        (opcion.telefono_whatsapp && opcion.telefono_whatsapp.toLowerCase().includes(busqueda))
       );
     }
   }
 
-  toggleDropdown() {
-    if (!this.disabled) {
-      this.abierto = !this.abierto;
-      if (this.abierto) {
-        this.filtrarOpciones();
-      }
-    }
-  }
-
+  // ✅ Abrir dropdown (siempre abre, no alterna)
   abrirDropdown() {
     if (!this.disabled && !this.abierto) {
       this.abierto = true;
@@ -343,21 +349,17 @@ export class SearchableSelectComponent implements ControlValueAccessor {
     
     this.valorSeleccionado = opcion;
     
-    // Actualizar el texto de búsqueda con el nombre seleccionado
     if (opcion) {
       this.textoBusqueda = opcion.nombre;
     } else {
       this.textoBusqueda = '';
     }
     
-    // IMPORTANTE: Cerrar el dropdown inmediatamente
     this.abierto = false;
     
-    // Notificar el cambio
     this.onChange(opcion ? opcion.id : null);
     this.selectionChange.emit(opcion);
     
-    // Resetear el flag después de un breve momento
     setTimeout(() => {
       this.ignoreBlur = false;
     }, 300);
