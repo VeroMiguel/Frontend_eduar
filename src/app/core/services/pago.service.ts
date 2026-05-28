@@ -22,8 +22,6 @@ export class PagoService {
   constructor(private http: HttpClient) {}
 
   registrarPago(pago: Partial<Pago>): Observable<any> {
-    console.log('💳 Registrando pago:', pago);
-    console.log('📡 API URL:', this.apiUrl);
     return this.http.post(this.apiUrl, pago);
   }
 
@@ -34,8 +32,7 @@ export class PagoService {
   eliminarPago(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
-
   actualizarPago(id: number, pago: Partial<Pago>): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}`, pago);
-  }
+  return this.http.put(`${this.apiUrl}/${id}`, pago);
+}
 }
