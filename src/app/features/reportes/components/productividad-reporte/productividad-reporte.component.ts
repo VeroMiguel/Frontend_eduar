@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -10,18 +10,20 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { Chart, registerables } from 'chart.js';
 import Swal from 'sweetalert2';
 import { SumPipe } from '../../../../shared/pipes/sum.pipe';
+
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-productividad-reporte',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MonedaPipe, FechaPipe, LoadingSpinnerComponent,SumPipe],
+  imports: [CommonModule, FormsModule, RouterModule, MonedaPipe, FechaPipe, LoadingSpinnerComponent, SumPipe],
   templateUrl: './productividad-reporte.component.html',
   styleUrls: ['./productividad-reporte.component.css']
 })
 export class ProductividadReporteComponent implements OnInit, OnDestroy {
   rendimiento: any[] = [];
   rendimientoFiltrado: any[] = [];
+  rendimientoPaginado: any[] = []; // ✅ Nuevo: para paginación
   tendenciaMensual: any[] = [];
   tendenciaFiltrada: any[] = [];
   resumen = {
@@ -44,39 +46,117 @@ export class ProductividadReporteComponent implements OnInit, OnDestroy {
   doctores: string[] = [];
   mostrarFiltros = false;
   
+  // ✅ Paginación
+  paginaActual: number = 1;
+  itemsPerPage: number = 10;
+  
   private subscriptions: Subscription[] = [];
 
   constructor(
     private reporteService: ReporteService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef  // ✅ Añadir ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.cargarDatos();
   }
 
- // En cargarDatos(), actualizar después de recibir los datos:
-cargarDatos() {
-  this.cargando = true;
-  
-  this.subscriptions.push(
-    this.reporteService.getReporteProductividad().subscribe({
-      next: (data) => {
-        console.log('📊 Datos de productividad:', data);
-        this.rendimiento = data.rendimiento;
-        this.resumen = data.resumen;
-        this.doctores = [...new Set(this.rendimiento.map(r => r.doctor))].sort();
-        this.rendimientoFiltrado = [...this.rendimiento];
-        this.cargarTendenciaMensual();
-      },
-      error: (error) => {
-        console.error('Error cargando reporte:', error);
-        this.cargando = false;
-        Swal.fire('Error', 'No se pudo cargar el reporte', 'error');
-      }
-    })
-  );
-}
+  cargarDatos() {
+    this.cargando = true;
+    
+    this.subscriptions.push(
+      this.reporteService.getReporteProductividad().subscribe({
+        next: (data) => {
+          console.log('📊 Datos de productividad:', data);
+          this.rendimiento = data.rendimiento;
+          this.resumen = data.resumen;
+          this.doctores = [...new Set(this.rendimiento.map(r => r.doctor))].sort();
+          this.rendimientoFiltrado = [...this.rendimiento];
+          
+          // ✅ Resetear paginación
+          this.paginaActual = 1;
+          this.actualizarPaginacion();
+          
+          this.cargarTendenciaMensual();
+        },
+        error: (error) => {
+          console.error('Error cargando reporte:', error);
+          this.cargando = false;
+          Swal.fire('Error', 'No se pudo cargar el reporte', 'error');
+        }
+      })
+    );
+  }
+
+  // ✅ Método para actualizar la paginación
+  actualizarPaginacion() {
+    const pagina = Number(this.paginaActual);
+    const items = Number(this.itemsPerPage);
+    
+    const inicio = (pagina - 1) * items;
+    const fin = inicio + items;
+    const finReal = Math.min(fin, this.rendimientoFiltrado.length);
+    
+    this.rendimientoPaginado = [...this.rendimientoFiltrado.slice(inicio, finReal)];
+    
+    this.cdr.detectChanges();
+  }
+
+  // ✅ Método para cambiar de página
+  cambiarPagina(pagina: number) {
+    const totalPaginas = Math.ceil(this.rendimientoFiltrado.length / Number(this.itemsPerPage));
+    if (pagina !== this.paginaActual && pagina >= 1 && pagina <= totalPaginas) {
+      this.paginaActual = pagina;
+      this.actualizarPaginacion();
+    }
+  }
+
+  // ✅ Método para cambiar items por página
+  cambiarItemsPorPagina() {
+    this.itemsPerPage = Number(this.itemsPerPage);
+    this.paginaActual = 1;
+    this.actualizarPaginacion();
+  }
+
+  // ✅ Getters para la paginación
+  get totalPaginas(): number {
+    return Math.ceil(this.rendimientoFiltrado.length / Number(this.itemsPerPage));
+  }
+
+  get inicioMostrando(): number {
+    if (this.rendimientoFiltrado.length === 0) return 0;
+    return (this.paginaActual - 1) * Number(this.itemsPerPage) + 1;
+  }
+
+  get finMostrando(): number {
+    return Math.min(this.paginaActual * Number(this.itemsPerPage), this.rendimientoFiltrado.length);
+  }
+
+  // ✅ Getter para los números de página
+  get paginationPages(): (number | string)[] {
+    const total = this.totalPaginas;
+    const current = this.paginaActual;
+    const pages: (number | string)[] = [];
+    
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      
+      if (current > 3) pages.push('...');
+      
+      const start = Math.max(2, current - 1);
+      const end = Math.min(total - 1, current + 1);
+      
+      for (let i = start; i <= end; i++) pages.push(i);
+      
+      if (current < total - 2) pages.push('...');
+      
+      pages.push(total);
+    }
+    return pages;
+  }
 
   cargarTendenciaMensual() {
     this.subscriptions.push(
@@ -100,42 +180,43 @@ cargarDatos() {
   }
 
   aplicarFiltros() {
-  // Filtrar rendimiento por doctor
-  if (this.filtros.doctor) {
-    this.rendimientoFiltrado = this.rendimiento.filter(
-      r => r.doctor === this.filtros.doctor
-    );
-  } else {
-    this.rendimientoFiltrado = [...this.rendimiento];
-  }
-  
-  // Filtrar tendencia por rango de fechas
-  if (this.filtros.fechaInicio || this.filtros.fechaFin) {
-    const fechaInicio = this.filtros.fechaInicio ? new Date(this.filtros.fechaInicio) : null;
-    const fechaFin = this.filtros.fechaFin ? new Date(this.filtros.fechaFin) : null;
+    // Filtrar rendimiento por doctor
+    if (this.filtros.doctor) {
+      this.rendimientoFiltrado = this.rendimiento.filter(
+        r => r.doctor === this.filtros.doctor
+      );
+    } else {
+      this.rendimientoFiltrado = [...this.rendimiento];
+    }
     
-    this.tendenciaFiltrada = this.tendenciaMensual.filter(t => {
-      // Obtener el mes como objeto Date (aproximado al primer día del mes)
-      const mesesMap: { [key: string]: number } = {
-        'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dic': 11
-      };
+    // ✅ Resetear paginación al aplicar filtros
+    this.paginaActual = 1;
+    this.actualizarPaginacion();
+    
+    // Filtrar tendencia por rango de fechas
+    if (this.filtros.fechaInicio || this.filtros.fechaFin) {
+      const fechaInicio = this.filtros.fechaInicio ? new Date(this.filtros.fechaInicio) : null;
+      const fechaFin = this.filtros.fechaFin ? new Date(this.filtros.fechaFin) : null;
       
-      // Asumir año actual (puedes ajustar si es necesario)
-      const añoActual = new Date().getFullYear();
-      const fechaMes = new Date(añoActual, mesesMap[t.mes], 1);
-      
-      if (fechaInicio && fechaMes < fechaInicio) return false;
-      if (fechaFin && fechaMes > fechaFin) return false;
-      return true;
-    });
-  } else {
-    this.tendenciaFiltrada = [...this.tendenciaMensual];
+      this.tendenciaFiltrada = this.tendenciaMensual.filter(t => {
+        const mesesMap: { [key: string]: number } = {
+          'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5,
+          'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dic': 11
+        };
+        
+        const añoActual = new Date().getFullYear();
+        const fechaMes = new Date(añoActual, mesesMap[t.mes], 1);
+        
+        if (fechaInicio && fechaMes < fechaInicio) return false;
+        if (fechaFin && fechaMes > fechaFin) return false;
+        return true;
+      });
+    } else {
+      this.tendenciaFiltrada = [...this.tendenciaMensual];
+    }
+    
+    this.actualizarGraficos();
   }
-  
-  // Actualizar gráficos
-  this.actualizarGraficos();
-}
 
   limpiarFiltros() {
     this.filtros = {
@@ -145,6 +226,10 @@ cargarDatos() {
     };
     this.rendimientoFiltrado = [...this.rendimiento];
     this.tendenciaFiltrada = [...this.tendenciaMensual];
+    
+    // ✅ Resetear paginación
+    this.paginaActual = 1;
+    this.actualizarPaginacion();
     this.actualizarGraficos();
   }
 
@@ -284,6 +369,19 @@ cargarDatos() {
     );
   }
 
+  getMesActual(): string {
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const hoy = new Date();
+    return meses[hoy.getMonth()];
+  }
+
+  calcularEficienciaTotal(): number {
+    const totalCompletadas = this.rendimientoFiltrado.reduce((sum, r) => sum + (r.completadas || 0), 0);
+    const totalPendientes = this.rendimientoFiltrado.reduce((sum, r) => sum + (r.pendientes || 0), 0);
+    const total = totalCompletadas + totalPendientes;
+    return total > 0 ? Math.round((totalCompletadas * 100) / total) : 0;
+  }
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => {
       if (sub && typeof sub.unsubscribe === 'function') {
@@ -296,24 +394,4 @@ cargarDatos() {
     
     console.log('🧹 ProductividadReporteComponent destruido');
   }
-  // Agregar después del método exportarExcel() y antes de ngOnDestroy()
-
-/**
- * Obtener el nombre del mes actual
- */
-getMesActual(): string {
-  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const hoy = new Date();
-  return meses[hoy.getMonth()];
-}
-
-/**
- * Calcular la eficiencia total del filtro actual
- */
-calcularEficienciaTotal(): number {
-  const totalCompletadas = this.rendimientoFiltrado.reduce((sum, r) => sum + (r.completadas || 0), 0);
-  const totalPendientes = this.rendimientoFiltrado.reduce((sum, r) => sum + (r.pendientes || 0), 0);
-  const total = totalCompletadas + totalPendientes;
-  return total > 0 ? Math.round((totalCompletadas * 100) / total) : 0;
-}
 }
