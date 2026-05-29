@@ -569,3 +569,197 @@
 [data-theme="dark"] .pagination-number:hover:not(.active) {
   background: #334155;
 }
+/* Agregar al final de doctores-reporte.component.css */
+
+/* ============================================
+   RESPONSIVE EXTREMO (pantallas < 400px)
+   ============================================ */
+
+@media (max-width: 400px) {
+  .reporte-container {
+    padding: 8px;
+  }
+
+  /* Header - reorganizar */
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-export,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Tarjetas de resumen */
+  .resumen-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .stat .value {
+    font-size: 1.3rem;
+  }
+
+  .stat .label {
+    font-size: 0.7rem;
+  }
+
+  /* Filtros */
+  .filtros-panel {
+    padding: 12px;
+  }
+
+  .filtros-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .filtro-group label {
+    font-size: 0.75rem;
+  }
+
+  .form-control {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+
+  .btn-clear {
+    width: 100%;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  /* Tabla */
+  .tabla-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabla-header h3 {
+    font-size: 1rem;
+  }
+
+  .items-per-page {
+    justify-content: space-between;
+  }
+
+  .reporte-table th,
+  .reporte-table td {
+    padding: 8px 6px;
+    font-size: 0.7rem;
+  }
+
+  .doctor-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .doctor-nombre {
+    font-size: 0.7rem;
+  }
+
+  .contacto-info {
+    font-size: 0.65rem;
+  }
+
+  .numero, .monto {
+    font-size: 0.7rem;
+  }
+
+  .btn-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .btn-icon i {
+    font-size: 0.7rem;
+  }
+
+  /* Rankings */
+  .ranking-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .ranking-card {
+    padding: 15px;
+  }
+
+  .ranking-card h3 {
+    font-size: 0.9rem;
+  }
+
+  .ranking-item {
+    padding: 6px;
+  }
+
+  .posicion {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  .nombre {
+    font-size: 0.75rem;
+  }
+
+  .valor {
+    font-size: 0.75rem;
+  }
+
+  /* Paginación */
+  .pagination-nav-btn {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+  }
+
+  .pagination-number {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Pantallas entre 400px y 500px */
+@media (min-width: 401px) and (max-width: 500px) {
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    width: 100%;
+    text-align: center;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .resumen-stats {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .filtros-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filtro-actions {
+    grid-column: span 2;
+  }
+}

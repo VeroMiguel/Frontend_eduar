@@ -440,3 +440,178 @@
 [data-theme="dark"] .pagination-number:hover:not(.active) {
   background: #334155;
 }
+/* Agregar al final de morosidad-reporte.component.css */
+
+/* ============================================
+   RESPONSIVE EXTREMO (pantallas < 400px)
+   ============================================ */
+
+@media (max-width: 400px) {
+  .reporte-container {
+    padding: 8px;
+  }
+
+  /* Header */
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-export,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Tarjetas de resumen */
+  .resumen-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .resumen-card .value {
+    font-size: 1.3rem;
+  }
+
+  .resumen-card .label {
+    font-size: 0.7rem;
+  }
+
+  /* Filtros */
+  .filtros-panel {
+    padding: 12px;
+  }
+
+  .filtros-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .filtro-group label {
+    font-size: 0.75rem;
+  }
+
+  .form-control {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+
+  .btn-clear {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tabla */
+  .tabla-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabla-header h3 {
+    font-size: 1rem;
+  }
+
+  .items-per-page {
+    justify-content: space-between;
+  }
+
+  .reporte-table th,
+  .reporte-table td {
+    padding: 8px 5px;
+    font-size: 0.7rem;
+  }
+
+  .doctor-cell strong {
+    font-size: 0.7rem;
+  }
+
+  .contacto-info {
+    font-size: 0.65rem;
+  }
+
+  .whatsapp-icon {
+    font-size: 0.7rem;
+  }
+
+  .whatsapp-link {
+    font-size: 0.65rem;
+  }
+
+  .numero, .monto {
+    font-size: 0.7rem;
+  }
+
+  .dias-badge {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+  }
+
+  .btn-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .btn-icon i {
+    font-size: 0.7rem;
+  }
+
+  /* Totales */
+  .total-row th,
+  .total-row td {
+    font-size: 0.7rem;
+  }
+
+  /* Paginación */
+  .pagination-nav-btn {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+  }
+
+  .pagination-number {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .pagination-info-text {
+    font-size: 0.7rem;
+  }
+}
+
+/* Pantallas entre 400px y 500px */
+@media (min-width: 401px) and (max-width: 500px) {
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    width: 100%;
+    text-align: center;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filtros-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filtro-actions {
+    grid-column: span 2;
+  }
+}

@@ -818,3 +818,171 @@
     font-size: 0.85rem;
   }
 }
+/* Agregar al final de ordenes.component.css */
+
+/* ============================================
+   RESPONSIVE EXTREMO (pantallas < 400px)
+   ============================================ */
+
+@media (max-width: 400px) {
+  .ordenes-container {
+    padding: 8px;
+  }
+
+  /* Header - reorganizar elementos en columna */
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-title h1 {
+    font-size: 1.3rem;
+  }
+
+  /* Stats badges - envolver y ajustar tamaño */
+  .header-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stat-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  /* Botón Nueva Orden - ancho completo */
+  .btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  /* Buscador - ocupar todo el ancho */
+  .search-box {
+    min-width: 100%;
+  }
+
+  .search-box input {
+    font-size: 0.85rem;
+    padding: 8px 12px 8px 35px;
+  }
+
+  /* Filtros rápidos - distribución flexible */
+  .filtros-rapidos {
+    width: 100%;
+    justify-content: space-between;
+    gap: 5px;
+  }
+
+  .filtro-rapido {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  /* Tabla - hacerla más compacta */
+  .ordenes-table th,
+  .ordenes-table td {
+    padding: 8px 6px;
+    font-size: 0.7rem;
+  }
+
+  .col-doctor {
+    min-width: 140px;
+  }
+
+  .col-estado {
+    min-width: 70px;
+  }
+
+  .col-acciones {
+    min-width: 60px;
+  }
+
+  /* Avatar más pequeño */
+  .doctor-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .doctor-info strong {
+    font-size: 0.75rem;
+  }
+
+  .servicio-nombre {
+    font-size: 0.65rem;
+  }
+
+  .cliente-nombre {
+    font-size: 0.6rem;
+  }
+
+  /* Badges de estado más compactos */
+  .estado-badge {
+    padding: 3px 8px;
+    font-size: 0.65rem;
+    min-width: 65px;
+  }
+
+  /* Botones de acción */
+  .btn-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .btn-icon i {
+    font-size: 0.75rem;
+  }
+
+  /* Paginación */
+  .pagination-container {
+    padding: 12px;
+  }
+
+  .pagination-info {
+    font-size: 0.7rem;
+  }
+
+  .pagination-btn,
+  .page-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .per-page-select {
+    padding: 5px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Pantallas entre 400px y 500px */
+@media (min-width: 401px) and (max-width: 500px) {
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .header-title {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn-primary {
+    width: 100%;
+    justify-content: center;
+    margin-top: 5px;
+  }
+
+  .filtro-rapido {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+  }
+}
