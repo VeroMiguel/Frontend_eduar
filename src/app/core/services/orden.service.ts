@@ -138,4 +138,50 @@ actualizarOrdenConImagen(id: number, formData: FormData): Observable<any> {
         })
     );
 }
+
+// orden.service.ts - Agregar este método
+
+getFechaHoraServidor(): Observable<{ 
+  fecha: string; 
+  hora: string; 
+  fecha_hora: string;
+  timestamp: number;
+  timezone: string;
+  hoy: string;
+  ahora_militar: string;
+}> {
+  return this.http.get<{
+    fecha: string;
+    hora: string;
+    fecha_hora: string;
+    timestamp: number;
+    timezone: string;
+    hoy: string;
+    ahora_militar: string;
+  }>(`${this.apiUrl}/server-datetime`).pipe(
+    timeout(10000),
+    retry(2),
+    catchError(error => {
+      console.error('Error obteniendo fecha/hora del servidor:', error);
+      // Fallback a fecha local si hay error
+      const ahoraLocal = new Date();
+      const anio = ahoraLocal.getFullYear();
+      const mes = String(ahoraLocal.getMonth() + 1).padStart(2, '0');
+      const dia = String(ahoraLocal.getDate()).padStart(2, '0');
+      const horas = String(ahoraLocal.getHours()).padStart(2, '0');
+      const minutos = String(ahoraLocal.getMinutes()).padStart(2, '0');
+      const segundos = String(ahoraLocal.getSeconds()).padStart(2, '0');
+      
+      return throwError(() => ({
+        fecha: `${anio}-${mes}-${dia}`,
+        hora: `${horas}:${minutos}:${segundos}`,
+        fecha_hora: `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`,
+        timestamp: ahoraLocal.getTime(),
+        timezone: 'local',
+        hoy: `${anio}-${mes}-${dia}`,
+        ahora_militar: `${horas}:${minutos}`
+      }));
+    })
+  );
+}
 }

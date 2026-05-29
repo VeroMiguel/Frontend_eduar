@@ -300,7 +300,7 @@
   color: #6366f1;
 }
 
-/* Barra de progreso pequeña */
+/* Barra de progreso pequeña - CORREGIDO para modo claro */
 .progress-bar-small {
   width: 100px;
   height: 24px;
@@ -317,6 +317,7 @@
   transition: width 0.3s;
 }
 
+/* ✅ CORREGIDO: El texto debe ser visible en ambos modos */
 .progress-bar-small span {
   position: absolute;
   top: 0;
@@ -326,9 +327,39 @@
   font-size: 0.7rem;
   line-height: 24px;
   font-weight: 600;
+  color: var(--txt, #0f172a); /* ✅ Usa la variable del tema */
+  text-shadow: none;
+}
+
+
+/* ✅ Para modo oscuro, el texto debe ser blanco */
+[data-theme="dark"] .progress-bar-small span {
   color: white;
   text-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
+
+/* ✅ También asegurar que el texto de la tabla sea visible */
+.reporte-table td {
+  color: var(--txt, #0f172a);
+}
+
+.eficiencia {
+  min-width: 110px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .total-row {
   background: var(--in, #f1f5f9);

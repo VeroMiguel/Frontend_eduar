@@ -48,7 +48,10 @@ paginaActual: number = 1;
 itemsPorPagina: number = 5;
 totalPaginas: number = 1;
 ordenesPaginadas: any[] = [];
+// ordenes.component.ts - Agregar después de fechaServidorHoy
 fechaServidorHoy: string = '';
+fechaHoraServidor: string = '';  // NUEVO: fecha y hora completa
+fechaHoraTimestamp: number = 0;   // NUEVO: timestamp para comparaciones
 ordenesSeleccionadas: any[] = [];
     // Filtros avanzados
   filtros = {
@@ -101,25 +104,33 @@ constructor(
 
 
 
+// ordenes.component.ts - Modificar ngOnInit
+
 ngOnInit() {
   // Restaurar filtros guardados
   this.restaurarFiltros();
 
-  // Obtener la fecha del servidor PRIMERO
+  // Obtener la fecha y hora del servidor PRIMERO
   this.subscriptions.push(
-    this.ordenService.getFechaServidor().subscribe({
-      next: (fechaRespuesta) => {
-        this.fechaServidorHoy = fechaRespuesta.fecha;
+    this.ordenService.getFechaHoraServidor().subscribe({
+      next: (fechaHoraRespuesta) => {
+        this.fechaServidorHoy = fechaHoraRespuesta.fecha;
+        this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
+        this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
         console.log('📅 Fecha del servidor:', this.fechaServidorHoy);
+        console.log('🕐 Hora del servidor:', fechaHoraRespuesta.hora);
+        console.log('📅🕐 Fecha/Hora completa:', this.fechaHoraServidor);
         
         // AHORA cargar las órdenes
         this.cargarOrdenesConFecha();
       },
       error: (error) => {
-        console.error('Error obteniendo fecha del servidor:', error);
+        console.error('Error obteniendo fecha/hora del servidor:', error);
         // Usar fecha local como respaldo
         const hoy = new Date();
         this.fechaServidorHoy = hoy.toISOString().split('T')[0];
+        this.fechaHoraServidor = hoy.toISOString();
+        this.fechaHoraTimestamp = hoy.getTime();
         console.log('📅 Usando fecha local como respaldo:', this.fechaServidorHoy);
         
         // Cargar órdenes igualmente
@@ -371,120 +382,61 @@ onServicioSeleccionado(servicio: any) {
 }
 
 
-  filtrarOrdenes() {
-    this.ordenesFiltradas = this.ordenes.filter(orden => {
-      // Búsqueda global (busca en TODOS los campos)
-      if (this.filtros.busquedaGlobal) {
-        const busqueda = this.filtros.busquedaGlobal.toLowerCase();
-        const coincideGlobal = 
-          (orden.doctor?.nombre?.toLowerCase() || '').includes(busqueda) ||
-          (orden.servicio?.nombre?.toLowerCase() || '').includes(busqueda) ||
-          (orden.cliente_nombre?.toLowerCase() || '').includes(busqueda) ||
-          (orden.id_externo?.toLowerCase() || '').includes(busqueda) ||
-          (orden.estado?.toLowerCase() || '').includes(busqueda) ||
-          (orden.prioridad?.toLowerCase() || '').includes(busqueda) ||
-          (orden.total?.toString() || '').includes(busqueda) ||
-          (this.calcularSaldo(orden)?.toString() || '').includes(busqueda);
-        
-        if (!coincideGlobal) return false;
-      }
-
-      // Filtro por doctor
-      if (this.filtros.doctor && orden.doctor?.nombre !== this.filtros.doctor) {
-        return false;
-      }
-
-      // Filtro por servicio
-      if (this.filtros.servicio && orden.servicio?.nombre !== this.filtros.servicio) {
-        return false;
-      }
-
-      // Filtro por estado
-      if (this.filtros.estado && orden.estado !== this.filtros.estado) {
-        return false;
-      }
-
-      // Filtro por prioridad
-      if (this.filtros.prioridad && orden.prioridad !== this.filtros.prioridad) {
-        return false;
-      }
-
-      // Filtro por cliente
-      if (this.filtros.cliente) {
-        const cliente = (orden.cliente_nombre || '').toLowerCase();
-        if (!cliente.includes(this.filtros.cliente.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // Filtro por fecha límite (rango)
-      if (this.filtros.fechaInicio && orden.fecha_limite) {
-        if (new Date(orden.fecha_limite) < new Date(this.filtros.fechaInicio)) {
-          return false;
-        }
-      }
-      if (this.filtros.fechaFin && orden.fecha_limite) {
-        if (new Date(orden.fecha_limite) > new Date(this.filtros.fechaFin)) {
-          return false;
-        }
-      }
-
-      // Filtro por rango de saldo
-      const saldo = this.calcularSaldo(orden);
-      if (this.filtros.saldoMin !== null && saldo < this.filtros.saldoMin) {
-        return false;
-      }
-      if (this.filtros.saldoMax !== null && saldo > this.filtros.saldoMax) {
-        return false;
-      }
-      // Filtro solo vencidas
-if (this.filtros.vencidas) {
-  // Log para depurar
-  if (orden.id === 14) {
-    console.log('🔍 Orden #14 pasando por filtro vencidas');
-  }
-  
-  // Una orden es vencida si: está pendiente, tiene saldo > 0 y la fecha límite es <= hoy
-  const saldo = this.calcularSaldo(orden);
-  if (orden.estado !== 'pendiente' || saldo <= 0) {
-    if (orden.id === 14) {
-      console.log('❌ Orden #14 descartada por estado o saldo:', { estado: orden.estado, saldo });
+// Modifica el método filtrarOrdenes
+filtrarOrdenes() {
+  this.ordenesFiltradas = this.ordenes.filter(orden => {
+    // Búsqueda global
+    if (this.filtros.busquedaGlobal) {
+      const busqueda = this.filtros.busquedaGlobal.toLowerCase();
+      const doctorNombre = orden.doctor?.nombre?.toLowerCase() || '';
+      const servicioNombre = orden.servicio?.nombre?.toLowerCase() || '';
+      const clienteNombre = (orden.cliente_nombre || '').toLowerCase();
+      const idExterno = (orden.id_externo || '').toLowerCase();
+      const coincideGlobal = 
+        doctorNombre.includes(busqueda) ||
+        servicioNombre.includes(busqueda) ||
+        clienteNombre.includes(busqueda) ||
+        idExterno.includes(busqueda);
+      
+      if (!coincideGlobal) return false;
     }
-    return false;
-  }
-  
-  // Usamos la función isVencida mejorada con fecha del servidor
-  const esVencida = this.isVencida(orden);
-  if (orden.id === 14) {
-    console.log('📊 Orden #14 esVencida =', esVencida);
-  }
-  
-  if (!esVencida) {
-    return false;
-  }
-}
 
-
-
-
-
-
-
- // Filtro para ocultar órdenes pagadas/terminadas
-    if (this.filtros.ocultarTerminadas) {
+    // FILTRO POR ESTADO (desde los botones Pendientes/Terminados)
+    if (this.filtros.estado) {
+      if (orden.estado !== this.filtros.estado) return false;
+      
+      // Si el filtro es "pendiente", además NO deben estar vencidas
+      if (this.filtros.estado === 'pendiente') {
+        const saldo = this.calcularSaldo(orden);
+        const esVencida = this.isVencida(orden);
+        // Solo mostrar pendientes que NO están vencidas
+        if (esVencida) return false;
+        if (saldo <= 0) return false;
+      }
+    }
+    
+    // FILTRO POR VENCIDAS (desde el botón Vencidas)
+    if (this.filtros.vencidas) {
+      const saldo = this.calcularSaldo(orden);
+      // Solo órdenes pendientes, con saldo > 0, y que estén vencidas
+      if (orden.estado !== 'pendiente') return false;
+      if (saldo <= 0) return false;
+      if (!this.isVencida(orden)) return false;
+    }
+    
+    // Filtro para ocultar órdenes pagadas/terminadas (cuando no hay filtros activos)
+    if (this.filtros.ocultarTerminadas && !this.filtros.estado && !this.filtros.vencidas) {
       const saldo = this.calcularSaldo(orden);
       const estaTerminada = orden.estado === 'terminado';
       const saldoCero = saldo === 0;
-      
-      if (estaTerminada || saldoCero) {
-        return false;
-      }
+      if (estaTerminada || saldoCero) return false;
     }
 
     return true;
   });
+  
   this.guardarFiltros();
-  this.actualizarPaginacion(); // <-- AGREGAR ESTA LÍNEA
+  this.actualizarPaginacion();
 }
   // Método para limpiar todos los filtros
 limpiarFiltros() {
@@ -548,35 +500,58 @@ get filtrosActivosCount(): number {
   return Number(Number(orden.total) - this.calcularTotalPagado(orden)) || 0;
 }
 
+// ordenes.component.ts - Verificar isVencida
+
+// ordenes.component.ts - Reemplazar el método isVencida
+
+// ordenes.component.ts - Reemplazar isVencida
+
 isVencida(orden: any): boolean {
   // Si no tiene fecha límite o ya está terminada, no está vencida
   if (!orden.fecha_limite || orden.estado === 'terminado') return false;
   
   // Calcular saldo pendiente
   const saldo = this.calcularSaldo(orden);
-  
-  // Si el saldo es 0, no está vencida (está pagada)
   if (saldo <= 0) return false;
   
-  // Usar la fecha del servidor (en formato YYYY-MM-DD)
-  const hoyStr = this.fechaServidorHoy;
-  const limiteStr = orden.fecha_limite;
+  // ✅ Usar el timestamp del servidor si está disponible
+  let ahora: Date;
   
-  // Si por alguna razón no tenemos la fecha del servidor, usar la fecha local
-  if (!hoyStr) {
-    const hoyLocal = new Date();
-    const hoyLocalStr = hoyLocal.toISOString().split('T')[0];
-    console.warn('⚠️ Usando fecha local como respaldo:', hoyLocalStr);
-    return limiteStr <= hoyLocalStr;
+  if (this.fechaHoraTimestamp > 0) {
+    ahora = new Date(this.fechaHoraTimestamp);
+  } else {
+    ahora = new Date();
   }
   
-  // Log para depurar la orden #14
-  if (orden.id === 14) {
-    console.log(`📊 Comparación orden #14: ${limiteStr} <= ${hoyStr} = ${limiteStr <= hoyStr}`);
+  // ✅ Construir la fecha/hora límite completa
+  const [yearL, monthL, dayL] = orden.fecha_limite.split('-').map(Number);
+  let hora = 23, minutos = 59, segundos = 59;
+  
+  if (orden.hora_limite) {
+    const horaParts = orden.hora_limite.split(':');
+    hora = parseInt(horaParts[0]);
+    minutos = parseInt(horaParts[1]);
+    segundos = 0;
   }
   
-  // Comparar como strings
-  return limiteStr <= hoyStr;
+  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
+  
+  // ✅ Comparar timestamps directamente (más preciso)
+  const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
+  
+  // Log para depuración
+  if (orden.id === 103) {
+    console.log(`📅 Orden #${orden.id}:`, {
+      ahora: ahora.toLocaleString('es-PE'),
+      fechaLimite: fechaLimiteCompleta.toLocaleString('es-PE'),
+      ahoraTimestamp: ahora.getTime(),
+      limiteTimestamp: fechaLimiteCompleta.getTime(),
+      diferenciaMinutos: Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000),
+      esVencida
+    });
+  }
+  
+  return esVencida;
 }
   // Método para agregar pago
 agregarPago(orden: any) {
@@ -763,22 +738,20 @@ private descargarPDF(orden: any, pdfBlob: Blob) {
 }
 
 // Reemplaza el método setFiltroEstado
+// Reemplaza el método setFiltroEstado
 setFiltroEstado(estado: string) {
-  // 1. Si estamos seleccionando un estado, desactivamos el filtro de vencidas.
-  // Esto asegura que no se mezclen los filtros.
+  // Desactivar filtro de vencidas si está activo
   if (this.filtros.vencidas) {
     this.filtros.vencidas = false;
   }
-  // 2. Asignamos el estado
+  
   this.filtros.estado = estado;
   this.paginaActual = 1;
   
-  // 3. Si seleccionamos "terminado", aseguramos que ocultarTerminadas sea false.
+  // Configurar ocultarTerminadas según el estado seleccionado
   if (estado === 'terminado') {
     this.filtros.ocultarTerminadas = false;
-  }
-  // 4. Si seleccionamos "pendiente", aseguramos que ocultarTerminadas sea true.
-  else if (estado === 'pendiente') {
+  } else {
     this.filtros.ocultarTerminadas = true;
   }
   
@@ -787,18 +760,15 @@ setFiltroEstado(estado: string) {
 
 // Reemplaza el método toggleFiltroVencidas
 toggleFiltroVencidas() {
-  // 1. Invertimos el estado del filtro de vencidas
-  this.filtros.vencidas = !this.filtros.vencidas;
-  this.paginaActual = 1;
-  
-  // 2. Si activamos el filtro de vencidas, debemos limpiar el filtro de estado.
-  // Esto evita que se muestren ambos como activos.
-  if (this.filtros.vencidas) {
+  // Si estamos filtrando por estado, lo desactivamos
+  if (this.filtros.estado) {
     this.filtros.estado = '';
   }
   
-  // 3. Aseguramos que el filtro ocultarTerminadas se comporte correctamente.
-  // Cuando vemos vencidas, solo queremos ver órdenes pendientes con deuda, por lo que ocultamos las terminadas.
+  this.filtros.vencidas = !this.filtros.vencidas;
+  this.paginaActual = 1;
+  
+  // Siempre ocultar terminadas cuando vemos vencidas
   this.filtros.ocultarTerminadas = true;
   
   this.filtrarOrdenes();
@@ -850,5 +820,37 @@ cambiarItemsPorPagina(cantidad: string | number) {
   this.itemsPorPagina = typeof cantidad === 'string' ? parseInt(cantidad, 10) : cantidad;
   this.paginaActual = 1;
   this.actualizarPaginacion();
+}
+getContadorPorEstado(estado: string, vencidas: boolean = false): number {
+  if (vencidas) {
+    return this.ordenes.filter(o => 
+      o.estado === 'pendiente' && 
+      this.isVencida(o) && 
+      this.calcularSaldo(o) > 0
+    ).length;
+  }
+  return this.ordenes.filter(o => o.estado === estado).length;
+}
+
+// Agrega estos métodos para los contadores
+
+getContadorPendientesNoVencidas(): number {
+  return this.ordenes.filter(o => 
+    o.estado === 'pendiente' && 
+    !this.isVencida(o) && 
+    this.calcularSaldo(o) > 0
+  ).length;
+}
+
+getContadorVencidas(): number {
+  return this.ordenes.filter(o => 
+    o.estado === 'pendiente' && 
+    this.isVencida(o) && 
+    this.calcularSaldo(o) > 0
+  ).length;
+}
+
+getContadorTerminados(): number {
+  return this.ordenes.filter(o => o.estado === 'terminado').length;
 }
 }

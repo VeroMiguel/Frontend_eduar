@@ -1,13 +1,20 @@
 <div class="ordenes-container">
   <div class="header">
     <div class="header-title">
-      <h1><i class="fas fa-clipboard-list"></i> Órdenes de Trabajo</h1>
-      <div class="header-stats" *ngIf="!cargando">
-        <span class="stat-badge active">
-          <i class="fas fa-chart-line"></i> Activas: {{ ordenesActivas.length }}
-        </span>
-      </div>
-    </div>
+  <h1><i class="fas fa-clipboard-list"></i> Órdenes de Trabajo</h1>
+  <!-- En el header de órdenes -->
+<div class="header-stats" *ngIf="!cargando">
+  <span class="stat-badge pendiente">
+    <i class="fas fa-clock"></i> Pendientes: {{ getContadorPendientesNoVencidas() }}
+  </span>
+  <span class="stat-badge vencida">
+    <i class="fas fa-exclamation-triangle"></i> Vencidas: {{ getContadorVencidas() }}
+  </span>
+  <span class="stat-badge terminado">
+    <i class="fas fa-check-circle"></i> Terminados: {{ getContadorTerminados() }}
+  </span>
+</div>
+</div>
     <button class="btn-primary" routerLink="nueva">
       <i class="fas fa-plus"></i> Nueva Orden
     </button>
@@ -74,49 +81,81 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let orden of ordenesPaginadas" 
-           [ngClass]="{'row-selected': estaSeleccionada(orden), 'row-vencida': isVencida(orden) && calcularSaldo(orden) > 0, 'row-terminada': orden.estado === 'terminado'}">
-          <td class="col-seleccion">
-            <input 
-              type="checkbox" 
-              [checked]="estaSeleccionada(orden)"
-              (change)="toggleSeleccion(orden, $event)"
-              class="checkbox-select-item">
-          </td>
-           <td class="col-doctor">
-          <div class="doctor-cell">
-            <div class="doctor-images">
-              <div class="doctor-avatar">
-                <app-image-zoom 
-                  [src]="orden.doctor?.logo_url"
-                  [alt]="orden.doctor?.nombre"
-                  defaultImage="assets/images/default-doctor.png"
-                  class="small-zoom">
-                </app-image-zoom>
-              </div>
-            </div>
-            <div class="doctor-info">
-              <strong>{{ orden.doctor?.nombre }}</strong>
-              <span class="servicio-nombre">{{ orden.servicio?.nombre }}</span>
-            </div>
-          </div>
-        </td>
-        <td class="col-estado">
-          <span class="estado-badge" [ngClass]="'estado-' + orden.estado">
-            {{ orden.estado | titlecase }}
-          </span>
-        </td>
-        <td class="col-acciones">
-          <div class="acciones-buttons">
-            <button class="btn-icon" [routerLink]="[orden.id]" title="Ver detalles">
-              <i class="fas fa-eye"></i>
-            </button>
-            <button class="btn-icon btn-delete" (click)="eliminarOrden(orden)" title="Eliminar orden">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
+      <!-- En ordenes.component.html - Mejora la fila de la tabla -->
+<tr *ngFor="let orden of ordenesPaginadas" 
+    [ngClass]="{
+      'row-selected': estaSeleccionada(orden),
+      'row-vencida': isVencida(orden) && orden.estado === 'pendiente',
+      'row-terminada': orden.estado === 'terminado',
+      'row-pendiente': !isVencida(orden) && orden.estado === 'pendiente'
+    }">
+  
+  <!-- Checkbox de selección -->
+  <td class="col-seleccion">
+    <input type="checkbox" 
+           [checked]="estaSeleccionada(orden)"
+           (change)="toggleSeleccion(orden, $event)"
+           class="checkbox-select-item">
+  </td>
+  
+  <!-- Doctor / Servicio -->
+  <td class="col-doctor">
+    <div class="doctor-cell">
+      <div class="doctor-images">
+        <div class="doctor-avatar">
+          <app-image-zoom 
+            [src]="orden.doctor?.logo_url"
+            [alt]="orden.doctor?.nombre"
+            defaultImage="assets/images/default-doctor.png"
+            class="small-zoom">
+          </app-image-zoom>
+        </div>
+      </div>
+      <div class="doctor-info">
+        <strong>{{ orden.doctor?.nombre || 'Sin doctor' }}</strong>
+        <span class="servicio-nombre">{{ orden.servicio?.nombre || 'Sin servicio' }}</span>
+        <span *ngIf="orden.cliente_nombre" class="cliente-nombre">
+          <i class="fas fa-user"></i> {{ orden.cliente_nombre }}
+        </span>
+      </div>
+    </div>
+  </td>
+  
+  <!-- Estado -->
+ <!-- En la celda de estado -->
+<td class="col-estado">
+  <span class="estado-badge" [ngClass]="{
+    'estado-pendiente': orden.estado === 'pendiente' && !isVencida(orden),
+    'estado-terminado': orden.estado === 'terminado',
+    'estado-vencido': isVencida(orden) && orden.estado === 'pendiente'
+  }">
+    <i class="fas" [ngClass]="{
+      'fa-clock': orden.estado === 'pendiente' && !isVencida(orden),
+      'fa-check-circle': orden.estado === 'terminado',
+      'fa-exclamation-triangle': isVencida(orden) && orden.estado === 'pendiente'
+    }"></i>
+    <!-- Mostrar "Vencida" solo si está vencida y es pendiente -->
+    <ng-container *ngIf="isVencida(orden) && orden.estado === 'pendiente'">
+      Vencida
+    </ng-container>
+    <ng-container *ngIf="!isVencida(orden) || orden.estado === 'terminado'">
+      {{ orden.estado | titlecase }}
+    </ng-container>
+  </span>
+</td>
+  
+  <!-- Acciones -->
+  <td class="col-acciones">
+    <div class="acciones-buttons">
+      <button class="btn-icon" [routerLink]="[orden.id]" title="Ver detalles">
+        <i class="fas fa-eye"></i>
+      </button>
+      <button class="btn-icon btn-delete" (click)="eliminarOrden(orden)" title="Eliminar orden">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  </td>
+</tr>
     </tbody>
   </table>
 

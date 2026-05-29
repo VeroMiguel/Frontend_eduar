@@ -313,23 +313,52 @@
   width: fit-content;
 }
 
-/* Estado badge */
+/* Estados de órdenes - MEJORADO */
 .estado-badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-align: center;
+  min-width: 90px;
 }
 
+/* Pendiente - AMARILLO */
 .estado-pendiente {
   background: #fef3c7;
   color: #92400e;
+  border-left: 3px solid #f59e0b;
 }
 
+
+/* Terminado - VERDE */
 .estado-terminado {
   background: #d1fae5;
   color: #065f46;
+  border-left: 3px solid #10b981;
+}
+
+/* Vencido - ROJO (para el badge cuando la orden está vencida) */
+.estado-vencido {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 3px solid #f43f5e;
+}
+
+
+/* Filas con estilos especiales */
+.row-pendiente {
+  border-left: 3px solid #f59e0b;
+}
+
+.row-terminada {
+  background: rgba(16, 185, 129, 0.05);
+  border-left: 3px solid #10b981;
+}
+
+.row-terminada:hover {
+  background: rgba(16, 185, 129, 0.1);
 }
 
 /* Fila vencida */
@@ -338,7 +367,9 @@
   border-left: 3px solid #f43f5e;
 }
 
-
+.row-vencida:hover {
+  background: rgba(244, 63, 94, 0.1);
+}
 
 /* Acciones */
 .acciones-buttons {

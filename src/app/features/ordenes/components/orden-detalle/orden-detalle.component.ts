@@ -37,7 +37,11 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   cargando = true;
   totalPagado = 0;
   saldo = 0;
-  fechaServidorHoy: string = '';
+  // orden-detalle.component.ts - Agregar después de fechaServidorHoy
+
+fechaServidorHoy: string = '';
+fechaHoraServidor: string = '';  // NUEVO
+fechaHoraTimestamp: number = 0;   // NUEVO
   subiendoImagen = false;
   private subscriptions: Subscription[] = [];
   
@@ -53,25 +57,31 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     private servicioService: ServicioService
   ) {}
 
-  ngOnInit() {
-    // Primero obtener la fecha del servidor
-    this.subscriptions.push(
-      this.ordenService.getFechaServidor().subscribe({
-        next: (fechaRespuesta) => {
-          this.fechaServidorHoy = fechaRespuesta.fecha;
-          console.log('📅 Detalle - Fecha del servidor:', this.fechaServidorHoy);
-          this.cargarOrdenDesdeParams();
-        },
-        error: (error) => {
-          console.error('Error obteniendo fecha del servidor:', error);
-          const hoy = new Date();
-          this.fechaServidorHoy = hoy.toISOString().split('T')[0];
-          console.log('📅 Detalle - Usando fecha local:', this.fechaServidorHoy);
-          this.cargarOrdenDesdeParams();
-        }
-      })
-    );
-  }
+// orden-detalle.component.ts - Modificar ngOnInit
+
+ngOnInit() {
+  // Primero obtener la fecha y hora del servidor
+  this.subscriptions.push(
+    this.ordenService.getFechaHoraServidor().subscribe({
+      next: (fechaHoraRespuesta) => {
+        this.fechaServidorHoy = fechaHoraRespuesta.fecha;
+        this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
+        this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
+        console.log('📅 Detalle - Fecha/Hora servidor:', this.fechaHoraServidor);
+        this.cargarOrdenDesdeParams();
+      },
+      error: (error) => {
+        console.error('Error obteniendo fecha/hora del servidor:', error);
+        const ahora = new Date();
+        this.fechaServidorHoy = ahora.toISOString().split('T')[0];
+        this.fechaHoraServidor = ahora.toISOString();
+        this.fechaHoraTimestamp = ahora.getTime();
+        console.log('📅 Detalle - Usando fecha local:', this.fechaServidorHoy);
+        this.cargarOrdenDesdeParams();
+      }
+    })
+  );
+}
 
   private cargarOrdenDesdeParams() {
     this.subscriptions.push(
@@ -101,19 +111,48 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     );
   }
 
-  isVencida(): boolean {
-    if (!this.orden?.fecha_limite || this.orden.estado === 'terminado') return false;
-    const saldo = this.saldo;
-    if (saldo <= 0) return false;
-    const hoyStr = this.fechaServidorHoy;
-    const limiteStr = this.orden.fecha_limite;
-    if (!hoyStr) {
-      const hoyLocal = new Date();
-      const hoyLocalStr = hoyLocal.toISOString().split('T')[0];
-      return limiteStr <= hoyLocalStr;
-    }
-    return limiteStr <= hoyStr;
+// orden-detalle.component.ts - Reemplazar el método isVencida
+
+// orden-detalle.component.ts - Reemplazar isVencida
+
+isVencida(): boolean {
+  if (!this.orden?.fecha_limite || this.orden.estado === 'terminado') return false;
+  const saldo = this.saldo;
+  if (saldo <= 0) return false;
+  
+  // ✅ Usar timestamp del servidor
+  let ahora: Date;
+  if (this.fechaHoraTimestamp > 0) {
+    ahora = new Date(this.fechaHoraTimestamp);
+  } else {
+    ahora = new Date();
   }
+  
+  // ✅ Construir fecha límite completa
+  const [yearL, monthL, dayL] = this.orden.fecha_limite.split('-').map(Number);
+  let hora = 23, minutos = 59, segundos = 59;
+  
+  if (this.orden.hora_limite) {
+    const horaParts = this.orden.hora_limite.split(':');
+    hora = parseInt(horaParts[0]);
+    minutos = parseInt(horaParts[1]);
+    segundos = 0;
+  }
+  
+  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
+  
+  // ✅ Comparar timestamps
+  const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
+  
+  console.log(`📅 Orden #${this.orden.id}:`, {
+    ahora: ahora.toLocaleString('es-PE'),
+    fechaLimite: fechaLimiteCompleta.toLocaleString('es-PE'),
+    diferenciaMinutos: Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000),
+    esVencida
+  });
+  
+  return esVencida;
+}
 
   calcularPagos() {
     if (this.orden?.pagos) {
