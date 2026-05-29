@@ -1,5 +1,5 @@
 // orden-form.component.ts
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -40,7 +40,8 @@ export class OrdenFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private notificationService: NotificationService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private cdr: ChangeDetectorRef  // ✅ AGREGAR ESTO
   ) {
     this.ordenForm = this.fb.group({
       doctor_id: ['', Validators.required],
@@ -55,60 +56,117 @@ export class OrdenFormComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
-    this.cargarDoctores();
-    this.cargarServicios();
+ngOnInit() {
+  // ✅ PRIMERO: Cargar doctores y servicios
+  this.cargarDoctores();
+  this.cargarServicios();
 
-    this.route.params.subscribe(params => {
-      if (params['id']) {
-        this.esEdicion = true;
-        this.ordenId = +params['id'];
-        this.cargarOrden();
-      }
-    });
-  }
-
-  cargarDoctores() {
-    this.doctorService.getDoctores().subscribe(data => {
-      this.doctores = data;
-    });
-  }
-
-  cargarServicios() {
-    this.servicioService.getServicios().subscribe(data => {
-      this.servicios = data;
-    });
-  }
-
-  cargarOrden() {
-    if (this.ordenId) {
-      this.ordenService.getOrden(this.ordenId).subscribe(orden => {
-        const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
-        
-        let fechaLimiteFormateada = '';
-        if (orden.fecha_limite) {
-          const fecha = new Date(orden.fecha_limite);
-          fechaLimiteFormateada = this.formatearFechaParaInput(fecha);
-        }
-        
-        this.ordenForm.patchValue({
-          doctor_id: orden.doctor_id,
-          servicio_id: orden.servicio_id,
-          total: orden.total,
-          pago_inicial: totalPagado,
-          prioridad: orden.prioridad,
-          fecha_limite: fechaLimiteFormateada,
-          hora_limite: orden.hora_limite,
-          cliente_nombre: orden.cliente_nombre,
-          detalle_cliente: orden.detalle_cliente
-        });
-
-        if (orden.imagen_referencia_url) {
-          this.previewUrl = orden.imagen_referencia_url;
-        }
-      });
+  this.route.params.subscribe(params => {
+    if (params['id']) {
+      this.esEdicion = true;
+      this.ordenId = +params['id'];
+      // ✅ ESPERAR a que se carguen doctores y servicios antes de cargar la orden
+      this.cargarOrdenCuandoListo();
     }
-  }
+  });
+}
+
+// ✅ Nuevo método: Esperar a que doctores y servicios estén listos
+private cargarOrdenCuandoListo() {
+  // Verificar cada 500ms si doctores y servicios están cargados
+  const intervalId = setInterval(() => {
+    if (this.doctores.length > 0 && this.servicios.length > 0) {
+      clearInterval(intervalId);
+      console.log('✅ Doctores y servicios cargados, procediendo a cargar orden...');
+      this.cargarOrden();
+    }
+  }, 100);
+  
+  // Timeout después de 5 segundos para no quedar en loop infinito
+  setTimeout(() => {
+    clearInterval(intervalId);
+    if (this.doctores.length === 0 || this.servicios.length === 0) {
+      console.error('❌ Timeout cargando doctores/servicios');
+      this.cargarOrden(); // Intentar cargar igualmente
+    }
+  }, 5000);
+}
+
+cargarDoctores() {
+  this.doctorService.getDoctores().subscribe({
+    next: (data) => {
+      this.doctores = data;
+      console.log('📋 Doctores cargados:', this.doctores.length);
+    },
+    error: (error) => console.error('Error cargando doctores:', error)
+  });
+}
+
+cargarServicios() {
+  this.servicioService.getServicios().subscribe({
+    next: (data) => {
+      this.servicios = data;
+      console.log('📋 Servicios cargados:', this.servicios.length);
+    },
+    error: (error) => console.error('Error cargando servicios:', error)
+  });
+}
+
+cargarOrden() {
+  if (!this.ordenId) return;
+  
+  this.ordenService.getOrden(this.ordenId).subscribe({
+    next: (orden) => {
+      const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
+      
+      let fechaLimiteFormateada = '';
+      if (orden.fecha_limite) {
+        const fecha = new Date(orden.fecha_limite);
+        fechaLimiteFormateada = this.formatearFechaParaInput(fecha);
+      }
+      
+      // ✅ Verificar que los valores existen en las listas
+      const doctorExiste = this.doctores.some(d => d.id === orden.doctor_id);
+      const servicioExiste = this.servicios.some(s => s.id === orden.servicio_id);
+      
+      console.log('📝 Cargando orden para editar:', {
+        doctor_id: orden.doctor_id,
+        servicio_id: orden.servicio_id,
+        doctorExiste,
+        servicioExiste,
+        doctoresDisponibles: this.doctores.map(d => ({ id: d.id, nombre: d.nombre })),
+        serviciosDisponibles: this.servicios.map(s => ({ id: s.id, nombre: s.nombre }))
+      });
+      
+      this.ordenForm.patchValue({
+        doctor_id: orden.doctor_id,
+        servicio_id: orden.servicio_id,
+        total: orden.total,
+        pago_inicial: totalPagado,
+        prioridad: orden.prioridad,
+        fecha_limite: fechaLimiteFormateada,
+        hora_limite: orden.hora_limite,
+        cliente_nombre: orden.cliente_nombre,
+        detalle_cliente: orden.detalle_cliente
+      });
+
+      // Cargar la imagen de referencia existente
+      if (orden.imagen_referencia_url) {
+        // ✅ Construir URL completa para la imagen
+        const baseUrl = 'http://localhost:3000';
+        this.previewUrl = `${baseUrl}${orden.imagen_referencia_url}`;
+        console.log('🖼️ Imagen de referencia cargada:', this.previewUrl);
+      }
+      
+      // Forzar actualización de la vista
+      this.cdr.detectChanges();
+    },
+    error: (error) => {
+      console.error('Error cargando orden:', error);
+      Swal.fire('Error', 'No se pudo cargar la orden', 'error');
+    }
+  });
+}
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
@@ -186,6 +244,7 @@ export class OrdenFormComponent implements OnInit {
     return control ? control.value : null;
   }
 
+  // ✅ También modifica el método onSubmit para asegurar que la imagen se actualice correctamente
   onSubmit() {
     if (this.ordenForm.valid) {
       const formValue = { ...this.ordenForm.value };
@@ -205,34 +264,37 @@ export class OrdenFormComponent implements OnInit {
         // ACTUALIZAR ORDEN
         const updateData = { ...formValue };
         
+        console.log('📝 Enviando actualización:', {
+          id: this.ordenId,
+          updateData,
+          tieneNuevaImagen: !!this.imagenSeleccionada
+        });
+        
+        // ✅ IMPORTANTE: Eliminar campos undefined o null que puedan causar problemas
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
+        });
+        
         if (this.imagenSeleccionada) {
+          // Si hay una nueva imagen, usar FormData
           const formData = new FormData();
+          
+          // Agregar todos los campos excepto la imagen (se agrega aparte)
           Object.keys(updateData).forEach(key => {
-            if (updateData[key] !== null && updateData[key] !== undefined) {
-              formData.append(key, updateData[key]);
+            if (updateData[key] !== null && updateData[key] !== undefined && updateData[key] !== '') {
+              formData.append(key, String(updateData[key]));
             }
           });
           formData.append('imagen_referencia', this.imagenSeleccionada);
           
+          this.subiendoImagen = true;
           this.ordenService.actualizarOrdenConImagen(this.ordenId, formData).subscribe({
             next: (respuesta: any) => {
               this.subiendoImagen = false;
-              let ordenActualizada = respuesta.orden;
-              
-              if (!ordenActualizada && respuesta.mensaje) {
-                const doctorId = this.getControlValue('doctor_id');
-                const servicioId = this.getControlValue('servicio_id');
-                ordenActualizada = {
-                  ...updateData,
-                  id: this.ordenId,
-                  doctor: this.doctores.find(d => d.id == doctorId),
-                  servicio: this.servicios.find(s => s.id == servicioId)
-                };
-              }
-              
-              this.programarNotificacionSiCorresponde(ordenActualizada || updateData);
               Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
-              this.router.navigate(['/ordenes']);
+              this.router.navigate(['/ordenes', this.ordenId]);
             },
             error: (error: any) => {
               this.subiendoImagen = false;
@@ -241,13 +303,13 @@ export class OrdenFormComponent implements OnInit {
             }
           });
         } else {
+          // Sin nueva imagen, usar PUT normal
+          this.subiendoImagen = true;
           this.ordenService.actualizarOrden(this.ordenId, updateData).subscribe({
             next: (respuesta: any) => {
               this.subiendoImagen = false;
-              const ordenActualizada = respuesta.orden || respuesta;
-              this.programarNotificacionSiCorresponde(ordenActualizada);
               Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
-              this.router.navigate(['/ordenes']);
+              this.router.navigate(['/ordenes', this.ordenId]);
             },
             error: (error: any) => {
               this.subiendoImagen = false;

@@ -172,17 +172,18 @@
   </div>
 </div>
 
-      <div class="acciones">
-        <button class="btn-whatsapp" (click)="enviarWhatsApp()">
-          <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
-        </button>
-        <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa">
-          <i class="fas fa-eye"></i> Vista Previa
-        </button>
-        <button class="btn-edit" [routerLink]="['/ordenes/editar', orden.id]">
-          <i class="fas fa-pen-to-square"></i> Editar
-        </button>
-      </div>
+     <!-- En orden-detalle.component.html -->
+<div class="acciones">
+  <button class="btn-whatsapp" (click)="enviarWhatsApp()">
+    <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
+  </button>
+  <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa">
+    <i class="fas fa-eye"></i> Vista Previa
+  </button>
+  <button class="btn-edit" [routerLink]="['/ordenes/editar', orden.id]">
+    <i class="fas fa-pen-to-square"></i> Editar
+  </button>
+</div>
     </div>
   </div>
 </div>

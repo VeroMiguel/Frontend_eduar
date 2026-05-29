@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { ImagenPipe } from '../../pipes/imagen.pipe';
@@ -297,9 +297,20 @@ export class SearchableSelectComponent implements ControlValueAccessor {
     this.filtrarOpciones();
   }
 
-  ngOnChanges() {
-    this.filtrarOpciones();
+// searchable-select.component.ts - Agregar este método
+
+ngOnChanges(changes: SimpleChanges) {
+  console.log('🔄 ngOnChanges:', changes);
+  
+  // Cuando las opciones cambian, verificar si tenemos un valor pendiente
+  if (changes['opciones'] && this.opciones.length > 0) {
+    const currentValue = this.valorSeleccionado?.id;
+    if (currentValue) {
+      console.log('🔄 Re-evaluando selección con nuevas opciones');
+      this.writeValue(currentValue);
+    }
   }
+}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -371,16 +382,37 @@ export class SearchableSelectComponent implements ControlValueAccessor {
     this.filtrarOpciones();
   }
 
-  writeValue(value: any): void {
-    if (value === null || value === undefined) {
-      this.valorSeleccionado = null;
-      this.textoBusqueda = '';
-    } else {
-      const opcion = this.opciones.find(o => o.id === value);
-      this.valorSeleccionado = opcion || null;
-      this.textoBusqueda = opcion ? opcion.nombre : '';
-    }
+// searchable-select.component.ts - Modificar writeValue
+
+writeValue(value: any): void {
+  console.log('📝 writeValue llamado con:', value, 'opciones:', this.opciones.length);
+  
+  if (value === null || value === undefined) {
+    this.valorSeleccionado = null;
+    this.textoBusqueda = '';
+    this.onChange(null);
+    return;
   }
+  
+  // Esperar a que las opciones estén cargadas
+  if (this.opciones.length === 0) {
+    console.log('⏳ Opciones aún no cargadas, reintentando en 100ms...');
+    setTimeout(() => this.writeValue(value), 100);
+    return;
+  }
+  
+  const opcion = this.opciones.find(o => o.id === Number(value));
+  console.log('🔍 Opción encontrada:', opcion);
+  
+  if (opcion) {
+    this.valorSeleccionado = opcion;
+    this.textoBusqueda = opcion.nombre;
+  } else {
+    console.warn('⚠️ No se encontró opción con ID:', value);
+    this.valorSeleccionado = null;
+    this.textoBusqueda = '';
+  }
+}
 
   registerOnChange(fn: any): void {
     this.onChange = fn;
@@ -393,4 +425,7 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
   }
+
+
+  
 }

@@ -324,3 +324,18 @@
 [data-theme="dark"] .upload-hint i {
   color: #8b5cf6;
 }
+/* Agregar al final de orden-form.component.css */
+.loading-select {
+  padding: 12px;
+  background: var(--in, #f8fafc);
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 12px;
+  color: var(--mut, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-select i {
+  color: #6366f1;
+}
