@@ -11,8 +11,6 @@ export interface AppConfig {
   sonidoHabilitado: boolean;
   vibracionHabilitada: boolean;
 
-  // Contacto
-  numeroCelular: string;
 }
 
 const CONFIG_KEY = 'app_config';
@@ -22,8 +20,7 @@ const DEFAULT_CONFIG: AppConfig = {
   tiempoNotificacionAnticipada: 60,
   notificacionesPushHabilitadas: true,
   sonidoHabilitado: true,
-  vibracionHabilitada: true,
-  numeroCelular: ''
+  vibracionHabilitada: true
 };
 
 @Injectable({
@@ -91,8 +88,7 @@ export class ConfigService {
       tiempoNotificacionAnticipada: Math.min(1440, Math.max(5, Number(c.tiempoNotificacionAnticipada) || DEFAULT_CONFIG.tiempoNotificacionAnticipada)),
       notificacionesPushHabilitadas: Boolean(c.notificacionesPushHabilitadas),
       sonidoHabilitado: Boolean(c.sonidoHabilitado),
-      vibracionHabilitada: Boolean(c.vibracionHabilitada),
-      numeroCelular: (c.numeroCelular ?? '').toString().trim()
+      vibracionHabilitada: Boolean(c.vibracionHabilitada)
     };
   }
 }

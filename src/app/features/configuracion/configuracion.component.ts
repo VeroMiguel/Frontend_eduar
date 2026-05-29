@@ -81,11 +81,7 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
       ],
       notificacionesPushHabilitadas: [cfg.notificacionesPushHabilitadas],
       sonidoHabilitado: [cfg.sonidoHabilitado],
-      vibracionHabilitada: [cfg.vibracionHabilitada],
-      numeroCelular: [
-        cfg.numeroCelular,
-        [Validators.pattern(/^[+]?[\d\s\-().]{0,20}$/)]
-      ]
+      vibracionHabilitada: [cfg.vibracionHabilitada]
     });
   }
 

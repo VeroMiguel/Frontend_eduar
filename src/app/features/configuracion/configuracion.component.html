@@ -277,43 +277,6 @@
       </div>
     </section>
 
-    <!-- ── Sección: Contacto ───────────────────────────────────────────────── -->
-    <section class="config-section">
-      <div class="section-header">
-        <div class="section-icon contact-icon">
-          <i class="fas fa-address-card"></i>
-        </div>
-        <div>
-          <h2>Contacto</h2>
-          <p>Información de contacto para notificaciones adicionales</p>
-        </div>
-      </div>
-
-      <div class="config-card">
-        <div class="field-group">
-          <label for="numeroCelular">
-            <i class="fas fa-phone"></i> Número de teléfono
-            <span class="optional-badge">Opcional</span>
-          </label>
-          <p class="field-hint">
-            Se usará para enviar notificaciones por WhatsApp o SMS cuando estén disponibles.
-          </p>
-          <div class="input-wrapper">
-            <span class="input-prefix"><i class="fas fa-phone-alt"></i></span>
-            <input
-              id="numeroCelular"
-              type="tel"
-              formControlName="numeroCelular"
-              placeholder="Ej: +51 999 888 777"
-              class="text-input"
-              maxlength="20">
-          </div>
-          <div class="field-error" *ngIf="f['numeroCelular'].invalid && f['numeroCelular'].touched">
-            Formato de teléfono inválido.
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- ── Panel de estado actual ─────────────────────────────────────────── -->
     <section class="config-section">
@@ -382,16 +345,6 @@
                   [class.status-on]="f['vibracionHabilitada'].value"
                   [class.status-off]="!f['vibracionHabilitada'].value">
               {{ f['vibracionHabilitada'].value ? 'Activada' : 'Desactivada' }}
-            </span>
-          </div>
-        </div>
-
-        <div class="status-item">
-          <i class="fas fa-phone status-item-icon contact-color"></i>
-          <div class="status-item-body">
-            <span class="status-item-label">Teléfono</span>
-            <span class="status-item-value">
-              {{ f['numeroCelular'].value || '—' }}
             </span>
           </div>
         </div>
