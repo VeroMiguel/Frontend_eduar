@@ -1,9 +1,9 @@
+// dashboard.component.ts - VERSIÓN CORREGIDA (sin polling automático)
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { OrdenService } from '../../core/services/orden.service';
-import { interval, Subscription } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Subscription } from 'rxjs'; // ✅ Ya no necesitas interval
 import { Chart, registerables } from 'chart.js';
 import { MonedaPipe } from '../../shared/pipes/moneda.pipe';
 import { FechaPipe } from '../../shared/pipes/fecha.pipe';
@@ -25,9 +25,10 @@ Chart.register(...registerables);
 export class DashboardComponent implements OnInit, OnDestroy {
   stats: any = {};
   ingresosMensuales: any[] = [];
-  private refreshSubscription?: Subscription;
   private chartEstados: Chart | null = null;
   private chartIngresos: Chart | null = null;
+  private isPageVisible = true;
+  private visibilityHandler: (() => void) | null = null;
 
   constructor(
     private ordenService: OrdenService,
@@ -35,15 +36,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // ✅ Cargar datos UNA SOLA VEZ al iniciar
     this.cargarEstadisticas();
     this.cargarIngresosMensuales();
     
-    this.refreshSubscription = interval(30000).pipe(
-      switchMap(() => this.ordenService.getEstadisticas())
-    ).subscribe(data => {
-      this.stats = data;
-      this.actualizarGraficos();
-    });
+    // ✅ Opcional: Actualizar solo cuando el usuario vuelve a la pestaña
+    this.visibilityHandler = () => {
+      this.isPageVisible = !document.hidden;
+      if (this.isPageVisible) {
+        // Actualizar datos cuando el usuario regresa a la pestaña
+        this.cargarEstadisticas();
+        this.cargarIngresosMensuales();
+      }
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   cargarEstadisticas() {
@@ -172,7 +178,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.refreshSubscription?.unsubscribe();
+    // ✅ Limpiar event listener
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+    }
+    
+    // ✅ Destruir gráficos
     if (this.chartEstados) {
       this.chartEstados.destroy();
     }

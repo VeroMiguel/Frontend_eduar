@@ -1,33 +1,34 @@
+// imagen.pipe.ts - Versión mejorada
 import { Pipe, PipeTransform } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { DebugService } from '../../core/services/debug.service';
 
 @Pipe({
   name: 'imagen',
   standalone: true
 })
 export class ImagenPipe implements PipeTransform {
+  constructor(private debugService?: DebugService) {}
+  
   transform(value: string, defaultImage: string = 'assets/images/default-doctor.png'): string {
     if (!value) {
       return defaultImage;
     }
     
-    // Si ya es una URL completa, devolverla
     if (value.startsWith('http')) {
       return value;
     }
     
-    // Si es data URL (base64), devolverla
     if (value.startsWith('data:')) {
       return value;
     }
     
-    // Construir URL completa al backend
     const baseUrl = environment.apiUrl.replace('/api', '');
     const fullUrl = `${baseUrl}${value}`;
     
-    // Log para debug (solo en desarrollo)
-    if (!environment.production) {
-      console.log('🖼️ Imagen pipe:', { original: value, fullUrl });
+    // ✅ Log solo si debug está activado y no es producción
+    if (!environment.production && this.debugService?.logImages) {
+      console.log('🖼️ Imagen:', value.substring(value.lastIndexOf('/') + 1));
     }
     
     return fullUrl;

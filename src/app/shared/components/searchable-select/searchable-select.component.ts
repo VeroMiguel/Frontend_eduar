@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { DebugService } from '../../../core/services/debug.service';
 import { ImagenPipe } from '../../pipes/imagen.pipe';
 
 @Component({
@@ -293,24 +294,33 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   private onChange: any = () => {};
   private onTouched: any = () => {};
 
+  // ✅ AGREGAR EL CONSTRUCTOR CON DebugService
+  constructor(private debugService: DebugService) {}
+
+
+
   ngOnInit() {
     this.filtrarOpciones();
   }
 
 // searchable-select.component.ts - Agregar este método
 
-ngOnChanges(changes: SimpleChanges) {
-  console.log('🔄 ngOnChanges:', changes);
-  
-  // Cuando las opciones cambian, verificar si tenemos un valor pendiente
-  if (changes['opciones'] && this.opciones.length > 0) {
-    const currentValue = this.valorSeleccionado?.id;
-    if (currentValue) {
-      console.log('🔄 Re-evaluando selección con nuevas opciones');
-      this.writeValue(currentValue);
+// Modificar ngOnChanges para usar debug service
+  ngOnChanges(changes: SimpleChanges) {
+    // ✅ Solo mostrar si debug está activado
+    if (this.debugService.logSelects && changes['opciones'] && this.opciones.length > 0) {
+      const currentValue = this.valorSeleccionado?.id;
+      if (currentValue) {
+        console.log('🔄 Re-evaluando selección con nuevas opciones');
+        this.writeValue(currentValue);
+      }
+    } else if (changes['opciones'] && this.opciones.length > 0) {
+      const currentValue = this.valorSeleccionado?.id;
+      if (currentValue) {
+        this.writeValue(currentValue);
+      }
     }
   }
-}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -384,35 +394,45 @@ ngOnChanges(changes: SimpleChanges) {
 
 // searchable-select.component.ts - Modificar writeValue
 
-writeValue(value: any): void {
-  console.log('📝 writeValue llamado con:', value, 'opciones:', this.opciones.length);
-  
-  if (value === null || value === undefined) {
-    this.valorSeleccionado = null;
-    this.textoBusqueda = '';
-    this.onChange(null);
-    return;
+ // ✅ MODIFICAR writeValue para usar debug service
+  writeValue(value: any): void {
+    // ✅ Solo mostrar logs si debug está activado
+    if (this.debugService.logSelects) {
+      console.log('📝 writeValue llamado con:', value, 'opciones:', this.opciones.length);
+    }
+    
+    if (value === null || value === undefined) {
+      this.valorSeleccionado = null;
+      this.textoBusqueda = '';
+      this.onChange(null);
+      return;
+    }
+    
+    // Esperar a que las opciones estén cargadas
+    if (this.opciones.length === 0) {
+      if (this.debugService.logSelects) {
+        console.log('⏳ Opciones aún no cargadas, reintentando en 100ms...');
+      }
+      setTimeout(() => this.writeValue(value), 100);
+      return;
+    }
+    
+    const opcion = this.opciones.find(o => o.id === Number(value));
+    
+    if (this.debugService.logSelects && opcion) {
+      console.log(`🔍 Opción encontrada: ${opcion.nombre}`);
+    } else if (this.debugService.logSelects && !opcion) {
+      console.warn('⚠️ No se encontró opción con ID:', value);
+    }
+    
+    if (opcion) {
+      this.valorSeleccionado = opcion;
+      this.textoBusqueda = opcion.nombre;
+    } else {
+      this.valorSeleccionado = null;
+      this.textoBusqueda = '';
+    }
   }
-  
-  // Esperar a que las opciones estén cargadas
-  if (this.opciones.length === 0) {
-    console.log('⏳ Opciones aún no cargadas, reintentando en 100ms...');
-    setTimeout(() => this.writeValue(value), 100);
-    return;
-  }
-  
-  const opcion = this.opciones.find(o => o.id === Number(value));
-  console.log('🔍 Opción encontrada:', opcion);
-  
-  if (opcion) {
-    this.valorSeleccionado = opcion;
-    this.textoBusqueda = opcion.nombre;
-  } else {
-    console.warn('⚠️ No se encontró opción con ID:', value);
-    this.valorSeleccionado = null;
-    this.textoBusqueda = '';
-  }
-}
 
   registerOnChange(fn: any): void {
     this.onChange = fn;
@@ -425,7 +445,4 @@ writeValue(value: any): void {
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
   }
-
-
-  
 }

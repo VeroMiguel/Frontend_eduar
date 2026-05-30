@@ -1,3 +1,4 @@
+import { DebugService } from '../../core/services/debug.service';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -18,6 +19,7 @@ import { TicketService } from '../../core/services/ticket.service';
 import { WhatsAppService } from '../../core/services/whatsapp.service';
 import { saveAs } from 'file-saver';
 import { HttpClient } from '@angular/common/http'; // <-- AGREGAR ESTO
+
 @Component({
   selector: 'app-ordenes',
   standalone: true,
@@ -99,7 +101,8 @@ constructor(
   private monedaPipe: MonedaPipe, // <-- AGREGAR ESTO
   private ticketService: TicketService,
   private whatsAppService: WhatsAppService, // <-- AGREGAR ESTO
-   private http: HttpClient  // <-- AGREGAR ESTO
+   private http: HttpClient,
+  private debugService: DebugService  // ✅ Agregar esta línea
 ) {}
 
 
@@ -506,24 +509,19 @@ get filtrosActivosCount(): number {
 
 // ordenes.component.ts - Reemplazar isVencida
 
+// Luego modificar el método isVencida (busca este método en tu archivo)
 isVencida(orden: any): boolean {
-  // Si no tiene fecha límite o ya está terminada, no está vencida
   if (!orden.fecha_limite || orden.estado === 'terminado') return false;
-  
-  // Calcular saldo pendiente
   const saldo = this.calcularSaldo(orden);
   if (saldo <= 0) return false;
   
-  // ✅ Usar el timestamp del servidor si está disponible
   let ahora: Date;
-  
   if (this.fechaHoraTimestamp > 0) {
     ahora = new Date(this.fechaHoraTimestamp);
   } else {
     ahora = new Date();
   }
   
-  // ✅ Construir la fecha/hora límite completa
   const [yearL, monthL, dayL] = orden.fecha_limite.split('-').map(Number);
   let hora = 23, minutos = 59, segundos = 59;
   
@@ -535,20 +533,12 @@ isVencida(orden: any): boolean {
   }
   
   const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
-  
-  // ✅ Comparar timestamps directamente (más preciso)
   const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
   
-  // Log para depuración
-  if (orden.id === 103) {
-    console.log(`📅 Orden #${orden.id}:`, {
-      ahora: ahora.toLocaleString('es-PE'),
-      fechaLimite: fechaLimiteCompleta.toLocaleString('es-PE'),
-      ahoraTimestamp: ahora.getTime(),
-      limiteTimestamp: fechaLimiteCompleta.getTime(),
-      diferenciaMinutos: Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000),
-      esVencida
-    });
+  // ✅ Log solo si debug está activado y solo para órdenes específicas
+  if (this.debugService.logVencidas && (orden.id === 103 || orden.id_externo?.includes('test'))) {
+    const diffMin = Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000);
+    console.log(`📅 Orden #${orden.id}: ${diffMin} min, ${esVencida ? 'VENCIDA' : 'OK'}`);
   }
   
   return esVencida;
