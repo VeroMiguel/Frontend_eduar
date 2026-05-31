@@ -40,16 +40,6 @@ export class WhatsAppService {
           <textarea id="mensaje-whatsapp" class="whatsapp-textarea" 
                     placeholder="Escribe tu mensaje..." 
                     style="min-height: 200px;">${mensajePredefinido}</textarea>
-          
-          <div class="variables-info">
-            <div class="variables-header">
-              <i class="fas fa-code"></i>
-              <span>Variables disponibles</span>
-            </div>
-            <div class="variables-grid">
-              ${this.obtenerVariablesHTML(options.tipo)}
-            </div>
-          </div>
         </div>
       `,
       showCancelButton: true,
@@ -182,59 +172,5 @@ Gracias por su preferencia.`;
       return `${horas12}:${minutos} ${ampm}`;
     }
     return hora;
-  }
-
-  private obtenerVariablesHTML(tipo: 'doctor' | 'orden'): string {
-    if (tipo === 'doctor') {
-      return `
-        <div class="variable-item">
-          <span class="variable-name">{nombre}</span>
-          <span class="variable-desc">Nombre del doctor</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{total_ordenes}</span>
-          <span class="variable-desc">Total de órdenes</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{pendientes}</span>
-          <span class="variable-desc">Órdenes pendientes</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{deuda}</span>
-          <span class="variable-desc">Deuda total</span>
-        </div>
-      `;
-    } else {
-      return `
-        <div class="variable-item">
-          <span class="variable-name">{nombre}</span>
-          <span class="variable-desc">Nombre del doctor</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{orden}</span>
-          <span class="variable-desc">Número de orden</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{servicio}</span>
-          <span class="variable-desc">Nombre del servicio</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{total}</span>
-          <span class="variable-desc">Total de la orden</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{abonado}</span>
-          <span class="variable-desc">Monto abonado</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{saldo}</span>
-          <span class="variable-desc">Saldo pendiente</span>
-        </div>
-        <div class="variable-item">
-          <span class="variable-name">{fecha}</span>
-          <span class="variable-desc">Fecha límite</span>
-        </div>
-      `;
-    }
   }
 }

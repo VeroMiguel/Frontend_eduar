@@ -53,25 +53,18 @@
           <p class="field-hint">
             La sesión se cerrará automáticamente tras este período de inactividad.
           </p>
-          <div class="slider-wrapper">
-            <span class="slider-min">5 min</span>
-            <input
-              id="tiempoCierre"
-              type="range"
-              formControlName="tiempoCierreAutomatico"
-              min="5"
-              max="480"
-              step="5"
-              class="slider slider-session">
-            <span class="slider-max">8 h</span>
+          
+          <!-- ✅ Botones en lugar de slider -->
+          <div class="option-buttons-container">
+            <button type="button"
+                    *ngFor="let opcion of opcionesCierre"
+                    class="option-btn"
+                    [class.active]="f['tiempoCierreAutomatico'].value === opcion.valor"
+                    (click)="f['tiempoCierreAutomatico'].setValue(opcion.valor)">
+              {{ opcion.texto }}
+            </button>
           </div>
-          <div class="slider-ticks">
-            <span *ngFor="let tick of [5, 30, 60, 120, 240, 480]"
-                  class="tick"
-                  [class.tick-active]="f['tiempoCierreAutomatico'].value >= tick">
-              {{ formatMinutos(tick) }}
-            </span>
-          </div>
+          
           <div class="field-error" *ngIf="f['tiempoCierreAutomatico'].invalid && f['tiempoCierreAutomatico'].touched">
             El valor debe estar entre 5 y 480 minutos.
           </div>
@@ -105,25 +98,18 @@
           <p class="field-hint">
             Recibirás una alerta este tiempo antes del vencimiento de una orden.
           </p>
-          <div class="slider-wrapper">
-            <span class="slider-min">5 min</span>
-            <input
-              id="tiempoNotif"
-              type="range"
-              formControlName="tiempoNotificacionAnticipada"
-              min="5"
-              max="1440"
-              step="5"
-              class="slider slider-notif">
-            <span class="slider-max">24 h</span>
+          
+          <!-- ✅ Botones en lugar de slider -->
+          <div class="option-buttons-container">
+            <button type="button"
+                    *ngFor="let opcion of opcionesNotificacion"
+                    class="option-btn"
+                    [class.active]="f['tiempoNotificacionAnticipada'].value === opcion.valor"
+                    (click)="f['tiempoNotificacionAnticipada'].setValue(opcion.valor)">
+              {{ opcion.texto }}
+            </button>
           </div>
-          <div class="slider-ticks">
-            <span *ngFor="let tick of [5, 60, 180, 360, 720, 1440]"
-                  class="tick"
-                  [class.tick-active]="f['tiempoNotificacionAnticipada'].value >= tick">
-              {{ formatMinutos(tick) }}
-            </span>
-          </div>
+          
           <div class="field-error" *ngIf="f['tiempoNotificacionAnticipada'].invalid && f['tiempoNotificacionAnticipada'].touched">
             El valor debe estar entre 5 y 1440 minutos.
           </div>

@@ -615,3 +615,16 @@
     grid-column: span 2;
   }
 }
+/* Agrega al final del archivo */
+.deuda {
+  color: #f43f5e;
+}
+
+.deuda-cero {
+  color: #10b981;
+}
+
+.deuda-positiva {
+  color: #f43f5e;
+  font-weight: 600;
+}

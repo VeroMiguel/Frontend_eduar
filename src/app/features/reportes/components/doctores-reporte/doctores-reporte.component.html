@@ -28,7 +28,9 @@
       </div>
       <div class="stat">
         <span class="label"><i class="fas fa-exclamation-triangle"></i> Deuda Total</span>
-        <span class="value deuda-positiva">{{ deudaTotal | moneda }}</span>
+       <span class="value" [ngClass]="{'deuda-positiva': deudaTotal > 0, 'deuda-cero': deudaTotal === 0}">
+        {{ deudaTotal | moneda }}
+      </span>
       </div>
       <div class="stat">
         <span class="label"><i class="fas fa-clock"></i> Órdenes Pendientes</span>
@@ -99,9 +101,6 @@
            <!-- Cambia esto: -->
             <td class="doctor-cell">
               <div class="doctor-info">
-                <img [src]="doctor.logo_url | imagen:'assets/images/default-doctor.png'" 
-                    [alt]="doctor.doctor"
-                    class="doctor-thumb">
                 <span class="doctor-nombre">{{ doctor.doctor}}</span>  <!-- ✅ Asegúrate que sea doctor.nombre -->
               </div>
             </td>
@@ -135,15 +134,17 @@
             <td colspan="10" class="empty-row">No hay doctores que coincidan con los filtros</td>
           </tr>
         </tbody>
-        <tfoot *ngIf="doctoresFiltrados.length > 0">
-          <tr class="total-row">
-            <th colspan="5">Totales</th>
-            <th class="monto">{{ totalFacturado | moneda }}</th>
-            <th class="monto">{{ totalPagado | moneda }}</th>
-            <th class="monto deuda-positiva">{{ deudaTotal | moneda }}</th>
-            <th colspan="2"></th>
-          </tr>
-        </tfoot>
+      <tfoot *ngIf="doctoresFiltrados.length > 0">
+  <tr class="total-row">
+    <th colspan="5">Totales</th>
+    <th class="monto">{{ totalFacturado | moneda }}</th>
+    <th class="monto">{{ totalPagado | moneda }}</th>
+    <th class="monto" [ngClass]="{'deuda-positiva': deudaTotal > 0, 'deuda-cero': deudaTotal === 0}">
+      {{ deudaTotal | moneda }}
+    </th>
+    <th colspan="2"></th>
+  </tr>
+</tfoot>
       </table>
     </div>
 
@@ -188,14 +189,16 @@
       </div>
     </div>
 
-    <div class="ranking-card glass">
-      <h3><i class="fas fa-exclamation-triangle" style="color: #f43f5e;"></i> Top 5 - Mayor Deuda</h3>
-      <div *ngFor="let doctor of topDeudores; let i = index" class="ranking-item">
-        <span class="posicion">{{ i + 1 }}</span>
-        <span class="nombre">{{ doctor.nombre }}</span>
-        <span class="valor deuda-positiva">{{ doctor.deuda_total | moneda }}</span>
-      </div>
-    </div>
+   <div class="ranking-card glass">
+  <h3><i class="fas fa-exclamation-triangle" style="color: #f43f5e;"></i> Top 5 - Mayor Deuda</h3>
+  <div *ngFor="let doctor of topDeudores; let i = index" class="ranking-item">
+    <span class="posicion">{{ i + 1 }}</span>
+    <span class="nombre">{{ doctor.nombre }}</span>
+    <span class="valor" [ngClass]="{'deuda-positiva': doctor.deuda_total > 0, 'deuda-cero': doctor.deuda_total === 0}">
+      {{ doctor.deuda_total | moneda }}
+    </span>
+  </div>
+</div>
   </div>
 
   <div *ngIf="cargando" class="loading-container">

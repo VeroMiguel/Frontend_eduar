@@ -10,13 +10,11 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { ConfigService } from '../../../../core/services/config.service';
 import Swal from 'sweetalert2';
 import { SearchableSelectComponent } from '../../../../shared/components/searchable-select/searchable-select.component';
-import { ImagenPipe } from '../../../../shared/pipes/imagen.pipe';
-import { HoraPipe } from 'src/app/shared/pipes/hora.pipe';
-
+import { environment } from '../../../../../environments/environment';
 @Component({
   selector: 'app-orden-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SearchableSelectComponent, ImagenPipe, HoraPipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SearchableSelectComponent],
   templateUrl: './orden-form.component.html',
   styleUrls: ['./orden-form.component.css']
 })
@@ -112,6 +110,8 @@ cargarServicios() {
   });
 }
 
+// orden-form.component.ts - Reemplazar el método cargarOrden()
+
 cargarOrden() {
   if (!this.ordenId) return;
   
@@ -119,24 +119,20 @@ cargarOrden() {
     next: (orden) => {
       const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
       
+      // ✅ CORREGIDO: Manejo correcto de fechas sin desfase
       let fechaLimiteFormateada = '';
       if (orden.fecha_limite) {
-        const fecha = new Date(orden.fecha_limite);
-        fechaLimiteFormateada = this.formatearFechaParaInput(fecha);
+        // La fecha viene como YYYY-MM-DD del backend
+        // NO aplicar conversión de zona horaria, usarla directamente
+        fechaLimiteFormateada = orden.fecha_limite; // Ya viene en formato YYYY-MM-DD
       }
       
-      // ✅ Verificar que los valores existen en las listas
-      const doctorExiste = this.doctores.some(d => d.id === orden.doctor_id);
-      const servicioExiste = this.servicios.some(s => s.id === orden.servicio_id);
-      
-      console.log('📝 Cargando orden para editar:', {
-        doctor_id: orden.doctor_id,
-        servicio_id: orden.servicio_id,
-        doctorExiste,
-        servicioExiste,
-        doctoresDisponibles: this.doctores.map(d => ({ id: d.id, nombre: d.nombre })),
-        serviciosDisponibles: this.servicios.map(s => ({ id: s.id, nombre: s.nombre }))
-      });
+      // ✅ Asegurar que hora_limite tenga formato HH:MM
+      let horaFormateada = orden.hora_limite || '';
+      if (horaFormateada && horaFormateada.includes(':')) {
+        // Si viene con segundos, solo tomar HH:MM
+        horaFormateada = horaFormateada.substring(0, 5);
+      }
       
       this.ordenForm.patchValue({
         doctor_id: orden.doctor_id,
@@ -145,20 +141,17 @@ cargarOrden() {
         pago_inicial: totalPagado,
         prioridad: orden.prioridad,
         fecha_limite: fechaLimiteFormateada,
-        hora_limite: orden.hora_limite,
+        hora_limite: horaFormateada,
         cliente_nombre: orden.cliente_nombre,
         detalle_cliente: orden.detalle_cliente
       });
 
       // Cargar la imagen de referencia existente
       if (orden.imagen_referencia_url) {
-        // ✅ Construir URL completa para la imagen
-        const baseUrl = 'http://localhost:3000';
-        this.previewUrl = `${baseUrl}${orden.imagen_referencia_url}`;
-        console.log('🖼️ Imagen de referencia cargada:', this.previewUrl);
+        const imagenesUrl = environment.baseUrl.replace(/\/+$/, '');
+        this.previewUrl = `${imagenesUrl}${orden.imagen_referencia_url}`;
       }
       
-      // Forzar actualización de la vista
       this.cdr.detectChanges();
     },
     error: (error) => {
@@ -219,12 +212,6 @@ cargarOrden() {
     this.previewUrl = null;
   }
 
-  private formatearFechaParaInput(fecha: Date): string {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 
   private formatearFechaParaBackend(fecha: string): string {
     if (!fecha) return '';
@@ -245,146 +232,153 @@ cargarOrden() {
   }
 
   // ✅ También modifica el método onSubmit para asegurar que la imagen se actualice correctamente
-  onSubmit() {
-    if (this.ordenForm.valid) {
-      const formValue = { ...this.ordenForm.value };
+  // orden-form.component.ts - Reemplazar el método onSubmit() completo
+
+async onSubmit() {  // ✅ AGREGAR 'async' aquí
+  if (this.ordenForm.valid) {
+    const formValue = { ...this.ordenForm.value };
+    
+    if (formValue.fecha_limite) {
+      formValue.fecha_limite = this.formatearFechaParaBackend(formValue.fecha_limite);
+    } else {
+      formValue.fecha_limite = null;
+      formValue.hora_limite = null;
+    }
+    
+    if (formValue.pago_inicial === '' || formValue.pago_inicial === null) {
+      formValue.pago_inicial = 0;
+    }
+    
+    if (this.esEdicion && this.ordenId) {
+      // ACTUALIZAR ORDEN
+      const updateData = { ...formValue };
       
-      if (formValue.fecha_limite) {
-        formValue.fecha_limite = this.formatearFechaParaBackend(formValue.fecha_limite);
-      } else {
-        formValue.fecha_limite = null;
-        formValue.hora_limite = null;
+      // ✅ CORREGIDO: Obtener orden original SIN await (usar toPromise con async/await funciona porque el método es async)
+      let ordenOriginal = null;
+      try {
+        ordenOriginal = await this.ordenService.getOrden(this.ordenId).toPromise();
+      } catch (err) {
+        console.warn('No se pudo obtener orden original:', err);
       }
       
-      if (formValue.pago_inicial === '' || formValue.pago_inicial === null) {
-        formValue.pago_inicial = 0;
-      }
+      const fechaOriginal = ordenOriginal?.fecha_limite || '';
+      const horaOriginal = ordenOriginal?.hora_limite || '';
+      const fechaNueva = updateData.fecha_limite || '';
+      const horaNueva = updateData.hora_limite || '';
       
-      if (this.esEdicion && this.ordenId) {
-        // ACTUALIZAR ORDEN
-        const updateData = { ...formValue };
-        
-        console.log('📝 Enviando actualización:', {
-          id: this.ordenId,
-          updateData,
-          tieneNuevaImagen: !!this.imagenSeleccionada
-        });
-        
-        // ✅ IMPORTANTE: Eliminar campos undefined o null que puedan causar problemas
-        Object.keys(updateData).forEach(key => {
-          if (updateData[key] === undefined) {
-            delete updateData[key];
-          }
-        });
-        
-        if (this.imagenSeleccionada) {
-          // Si hay una nueva imagen, usar FormData
-          const formData = new FormData();
-          
-          // Agregar todos los campos excepto la imagen (se agrega aparte)
-          Object.keys(updateData).forEach(key => {
-            if (updateData[key] !== null && updateData[key] !== undefined && updateData[key] !== '') {
-              formData.append(key, String(updateData[key]));
-            }
-          });
-          formData.append('imagen_referencia', this.imagenSeleccionada);
-          
-          this.subiendoImagen = true;
-          this.ordenService.actualizarOrdenConImagen(this.ordenId, formData).subscribe({
-            next: (respuesta: any) => {
-              this.subiendoImagen = false;
-              Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
-              this.router.navigate(['/ordenes', this.ordenId]);
-            },
-            error: (error: any) => {
-              this.subiendoImagen = false;
-              console.error('Error actualizando orden:', error);
-              Swal.fire('Error', 'No se pudo actualizar la orden', 'error');
-            }
-          });
-        } else {
-          // Sin nueva imagen, usar PUT normal
-          this.subiendoImagen = true;
-          this.ordenService.actualizarOrden(this.ordenId, updateData).subscribe({
-            next: (respuesta: any) => {
-              this.subiendoImagen = false;
-              Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
-              this.router.navigate(['/ordenes', this.ordenId]);
-            },
-            error: (error: any) => {
-              this.subiendoImagen = false;
-              console.error('Error actualizando orden:', error);
-              Swal.fire('Error', 'No se pudo actualizar la orden', 'error');
-            }
-          });
-        }
-      } else {
-        // CREAR NUEVA ORDEN
+      const fechaCambio = fechaOriginal !== fechaNueva || horaOriginal !== horaNueva;
+      
+      if (this.imagenSeleccionada) {
         const formData = new FormData();
-        Object.keys(formValue).forEach(key => {
-          if (formValue[key] !== null && formValue[key] !== undefined && formValue[key] !== '') {
-            formData.append(key, formValue[key]);
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] !== null && updateData[key] !== undefined && updateData[key] !== '') {
+            formData.append(key, String(updateData[key]));
           }
         });
-
-        if (this.imagenSeleccionada) {
-          formData.append('imagen_referencia', this.imagenSeleccionada);
-        }
-
-        this.ordenService.crearOrdenConImagen(formData).subscribe({
-          next: (respuesta: any) => {
+        formData.append('imagen_referencia', this.imagenSeleccionada);
+        
+        this.subiendoImagen = true;
+        this.ordenService.actualizarOrdenConImagen(this.ordenId, formData).subscribe({
+          next: async (respuesta: any) => {
             this.subiendoImagen = false;
             
-            let ordenCreada = respuesta.orden;
-            
-            if (!ordenCreada && respuesta.mensaje) {
-              console.warn('⚠️ Backend no devolvió orden completa, construyendo manualmente...');
-              
-              // ✅ CORREGIDO: Usar getControlValue para evitar errores de null
-              const doctorId = this.getControlValue('doctor_id');
-              const servicioId = this.getControlValue('servicio_id');
-              
-              console.log('🔍 Buscando doctor con ID:', doctorId);
-              console.log('🔍 Buscando servicio con ID:', servicioId);
-              console.log('📋 Doctores disponibles:', this.doctores);
-              console.log('📋 Servicios disponibles:', this.servicios);
-              
-              ordenCreada = {
-                id: 'nueva',
-                id_externo: `ORD-${Date.now()}`,
-                doctor: this.doctores.find(d => d && d.id == doctorId) || null,
-                servicio: this.servicios.find(s => s && s.id == servicioId) || null,
-                fecha_limite: formValue.fecha_limite,
-                hora_limite: formValue.hora_limite,
-                cliente_nombre: formValue.cliente_nombre,
-                total: formValue.total
-              };
-              console.log('📦 Orden construida manualmente:', ordenCreada);
+            if (fechaCambio && respuesta.orden) {
+              console.log('🔄 Fecha límite modificada, reprogramando notificaciones...');
+              await this.reprogramarNotificaciones(respuesta.orden);
             }
             
-            this.programarNotificacionSiCorresponde(ordenCreada || formValue);
-            Swal.fire('¡Éxito!', 'Orden creada correctamente', 'success');
-            this.router.navigate(['/ordenes']);
+            Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
+            this.router.navigate(['/ordenes', this.ordenId]);
           },
           error: (error: any) => {
             this.subiendoImagen = false;
-            console.error('Error creando orden:', error);
-            Swal.fire('Error', 'No se pudo crear la orden', 'error');
+            console.error('Error actualizando orden:', error);
+            Swal.fire('Error', 'No se pudo actualizar la orden', 'error');
+          }
+        });
+      } else {
+        this.subiendoImagen = true;
+        this.ordenService.actualizarOrden(this.ordenId, updateData).subscribe({
+          next: async (respuesta: any) => {
+            this.subiendoImagen = false;
+            
+            if (fechaCambio && respuesta.orden) {
+              console.log('🔄 Fecha límite modificada, reprogramando notificaciones...');
+              await this.reprogramarNotificaciones(respuesta.orden);
+            }
+            
+            Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
+            this.router.navigate(['/ordenes', this.ordenId]);
+          },
+          error: (error: any) => {
+            this.subiendoImagen = false;
+            console.error('Error actualizando orden:', error);
+            Swal.fire('Error', 'No se pudo actualizar la orden', 'error');
           }
         });
       }
     } else {
-      Object.keys(this.ordenForm.controls).forEach(key => {
-        const control = this.ordenForm.get(key);
-        if (control?.invalid) {
-          console.log(`Campo inválido: ${key}`, control.errors);
+      // CREAR NUEVA ORDEN
+      const formData = new FormData();
+      Object.keys(formValue).forEach(key => {
+        if (formValue[key] !== null && formValue[key] !== undefined && formValue[key] !== '') {
+          formData.append(key, formValue[key]);
         }
       });
-      Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
-    }
-  }
 
- private async programarNotificacionSiCorresponde(orden: any): Promise<void> {
+      if (this.imagenSeleccionada) {
+        formData.append('imagen_referencia', this.imagenSeleccionada);
+      }
+
+      this.ordenService.crearOrdenConImagen(formData).subscribe({
+        next: (respuesta: any) => {
+          this.subiendoImagen = false;
+          
+          let ordenCreada = respuesta.orden;
+          
+          if (!ordenCreada && respuesta.mensaje) {
+            console.warn('⚠️ Backend no devolvió orden completa, construyendo manualmente...');
+            
+            const doctorId = this.getControlValue('doctor_id');
+            const servicioId = this.getControlValue('servicio_id');
+            
+            ordenCreada = {
+              id: 'nueva',
+              id_externo: `ORD-${Date.now()}`,
+              doctor: this.doctores.find(d => d && d.id == doctorId) || null,
+              servicio: this.servicios.find(s => s && s.id == servicioId) || null,
+              fecha_limite: formValue.fecha_limite,
+              hora_limite: formValue.hora_limite,
+              cliente_nombre: formValue.cliente_nombre,
+              total: formValue.total
+            };
+          }
+          
+          this.programarNotificacionSiCorresponde(ordenCreada || formValue);
+          Swal.fire('¡Éxito!', 'Orden creada correctamente', 'success');
+          this.router.navigate(['/ordenes']);
+        },
+        error: (error: any) => {
+          this.subiendoImagen = false;
+          console.error('Error creando orden:', error);
+          Swal.fire('Error', 'No se pudo crear la orden', 'error');
+        }
+      });
+    }
+  } else {
+    Object.keys(this.ordenForm.controls).forEach(key => {
+      const control = this.ordenForm.get(key);
+      if (control?.invalid) {
+        console.log(`Campo inválido: ${key}`, control.errors);
+      }
+    });
+    Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
+  }
+}
+
+// orden-form.component.ts - Reemplazar el método programarNotificacionSiCorresponde()
+
+private async programarNotificacionSiCorresponde(orden: any): Promise<void> {
   console.log('🔔 [DEBUG] programarNotificacionSiCorresponde llamado con:', orden);
   
   if (!orden?.fecha_limite) {
@@ -408,15 +402,15 @@ cargarOrden() {
     return;
   }
 
-  // ✅ IMPORTANTE: Usar AWAIT porque la función es ASYNC
+  // ✅ CORREGIDO: Asegurar valores string
   const resultado = await this.notificationService.programarNotificacionOrden({
     id: orden.id ?? orden.id_externo ?? 'nueva',
     id_externo: orden.id_externo ?? `#${orden.id}`,
-    fecha_limite: orden.fecha_limite,
-    hora_limite: orden.hora_limite,
+    fecha_limite: orden.fecha_limite || '',
+    hora_limite: orden.hora_limite || '',
     doctor: orden.doctor,
     servicio: orden.servicio,
-    cliente_nombre: orden.cliente_nombre
+    cliente_nombre: orden.cliente_nombre || ''
   });
 
   console.log('📊 Resultado programación:', resultado);
@@ -441,6 +435,37 @@ cargarOrden() {
         ? `A la hora exacta y <strong>${anticipacionTexto} antes</strong>`
         : resultado.mensaje
     });
+  }
+}
+// orden-form.component.ts - Agregar este método
+
+// orden-form.component.ts - Reemplazar el método reprogramarNotificaciones()
+
+private async reprogramarNotificaciones(ordenActualizada: any): Promise<void> {
+  try {
+    // Obtener la orden completa con relaciones
+    const ordenCompleta = await this.ordenService.getOrden(ordenActualizada.id).toPromise();
+    
+    if (!ordenCompleta) return;
+    
+    // ✅ CORREGIDO: Asegurar que fecha_limite sea string
+    const fechaLimite = ordenCompleta.fecha_limite || '';
+    const horaLimite = ordenCompleta.hora_limite || '';
+    
+    // Programar nuevas notificaciones
+    await this.notificationService.programarNotificacionOrden({
+      id: ordenCompleta.id,
+      id_externo: ordenCompleta.id_externo,
+      fecha_limite: fechaLimite,  // ✅ Ahora es string, no undefined
+      hora_limite: horaLimite,     // ✅ Ahora es string, no undefined
+      doctor: ordenCompleta.doctor,
+      servicio: ordenCompleta.servicio,
+      cliente_nombre: ordenCompleta.cliente_nombre || ''
+    });
+    
+    console.log(`✅ Notificaciones reprogramadas para orden ${ordenCompleta.id_externo}`);
+  } catch (error) {
+    console.error('Error reprogramando notificaciones:', error);
   }
 }
 }

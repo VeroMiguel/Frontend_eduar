@@ -29,6 +29,30 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
   solicitandoFcm = false;
   private sub?: Subscription;
 
+  // Opciones para el tiempo de cierre automático
+  opcionesCierre = [
+    { valor: 5, texto: '5 min' },
+    { valor: 15, texto: '15 min' },
+    { valor: 30, texto: '30 min' },
+    { valor: 60, texto: '1 h' },
+    { valor: 120, texto: '2 h' },
+    { valor: 240, texto: '4 h' },
+    { valor: 480, texto: '8 h' }
+  ];
+
+  // Opciones para el tiempo de notificación anticipada
+  opcionesNotificacion = [
+    { valor: 5, texto: '5 min' },
+    { valor: 15, texto: '15 min' },
+    { valor: 30, texto: '30 min' },
+    { valor: 60, texto: '1 h' },
+    { valor: 120, texto: '2 h' },
+    { valor: 180, texto: '3 h' },
+    { valor: 360, texto: '6 h' },
+    { valor: 720, texto: '12 h' },
+    { valor: 1440, texto: '24 h' }
+  ];
+
   // Estado de permisos de notificación
   get permisoNotificacion(): string {
     return this.notificationService.estadoPermiso;
@@ -37,28 +61,6 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
   get swSoportado(): boolean {
     return 'serviceWorker' in navigator;
   }
-
-  // Etiquetas legibles para los sliders
-  readonly labelsCierre: Record<number, string> = {
-    5: '5 min',
-    15: '15 min',
-    30: '30 min',
-    60: '1 h',
-    120: '2 h',
-    240: '4 h',
-    480: '8 h'
-  };
-
-  readonly labelsNotif: Record<number, string> = {
-    5: '5 min',
-    15: '15 min',
-    30: '30 min',
-    60: '1 h',
-    120: '2 h',
-    360: '6 h',
-    720: '12 h',
-    1440: '24 h'
-  };
 
   constructor(
     private fb: FormBuilder,
@@ -113,7 +115,6 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
     this.guardando = true;
     const config: AppConfig = this.form.value as AppConfig;
 
-    // Simular latencia mínima para feedback visual
     setTimeout(() => {
       this.configService.saveConfig(config);
       this.guardando = false;
@@ -160,9 +161,6 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Solicita permiso de notificaciones del navegador
-   */
   async solicitarPermisoNotificacion(): Promise<void> {
     const concedido = await this.notificationService.solicitarPermiso();
     if (concedido) {
@@ -185,17 +183,12 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Solicita permiso de notificaciones y activa FCM para este dispositivo.
-   * Muestra el token FCM obtenido (útil para depuración).
-   */
-async activarNotificacionesFcm(): Promise<void> {
+  async activarNotificacionesFcm(): Promise<void> {
     this.solicitandoFcm = true;
 
     try {
         console.log('🔄 Iniciando renovación de token FCM...');
         
-        // ✅ 1. Obtener nuevo token (forzar renovación)
         const token = await this.fcmService.obtenerToken(true);
         
         if (!token) {
@@ -204,14 +197,12 @@ async activarNotificacionesFcm(): Promise<void> {
         
         console.log('✅ Nuevo token obtenido:', token.substring(0, 30) + '...');
         
-        // ✅ 2. Registrar en backend (esperar respuesta)
         const registrado = await this.notificationService.registrarTokenEnBackend(token);
         
         if (!registrado) {
             throw new Error('No se pudo registrar el token en el servidor');
         }
         
-        // ✅ 3. Actualizar el token localmente
         localStorage.setItem('fcm_device_token', token);
         
         Swal.fire({
@@ -239,7 +230,8 @@ async activarNotificacionesFcm(): Promise<void> {
     } finally {
         this.solicitandoFcm = false;
     }
-}
+  }
+
   async probarNotificacion(): Promise<void> {
     const cfg: AppConfig = this.form.value as AppConfig;
 
@@ -253,23 +245,19 @@ async activarNotificacionesFcm(): Promise<void> {
       return;
     }
 
-    // Solicitar permiso si no se tiene
     if (this.permisoNotificacion !== 'granted') {
       await this.solicitarPermisoNotificacion();
       if (this.permisoNotificacion !== 'granted') return;
     }
 
-    // Vibración de prueba
     if (cfg.vibracionHabilitada && 'vibrate' in navigator) {
       navigator.vibrate([200, 100, 200]);
     }
 
-    // Sonido de prueba
     if (cfg.sonidoHabilitado) {
       this.reproducirBeep();
     }
 
-    // Mostrar notificación nativa de prueba
     this.notificationService.mostrarNotificacion(
       '🔔 Notificación de prueba',
       `Anticipación configurada: ${this.formatMinutos(cfg.tiempoNotificacionAnticipada)}`

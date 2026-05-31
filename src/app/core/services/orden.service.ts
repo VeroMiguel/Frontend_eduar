@@ -184,4 +184,20 @@ getFechaHoraServidor(): Observable<{
     })
   );
 }
+// orden.service.ts - Agregar este método auxiliar
+
+// Asegurar que la fecha límite se guarde correctamente
+formatearFechaParaBackend(fecha: string): string {
+  if (!fecha) return '';
+  // Si ya viene en formato YYYY-MM-DD, devolver igual
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return fecha;
+  }
+  // Si viene en otro formato, convertir
+  const date = new Date(fecha);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 }

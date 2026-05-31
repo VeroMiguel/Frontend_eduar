@@ -15,7 +15,9 @@
   <div class="resumen-grid">
     <div class="resumen-card glass">
       <span class="label"><i class="fas fa-dollar-sign"></i> Deuda Total</span>
-      <span class="value deuda">{{ resumen.deudaTotal | moneda }}</span>
+     <span class="value" [ngClass]="{'deuda': resumen.deudaTotal > 0, 'deuda-cero': resumen.deudaTotal === 0}">
+  {{ resumen.deudaTotal | moneda }}
+</span>
     </div>
     <div class="resumen-card glass">
       <span class="label"><i class="fas fa-users"></i> Clientes Morosos</span>
@@ -121,7 +123,9 @@
   <tr class="total-row">
     <th colspan="2">Totales</th>
     <th class="numero">{{ deudaFiltrada.length }}</th>
-    <th class="monto deuda-positiva">{{ totalDeudaFiltrada | moneda }}</th>
+    <th class="monto" [ngClass]="{'deuda-positiva': totalDeudaFiltrada > 0, 'deuda-cero': totalDeudaFiltrada === 0}">
+      {{ totalDeudaFiltrada | moneda }}
+    </th>
     <th class="numero">{{ totalVencidasFiltradas }}</th>
     <th colspan="2"></th>
   </tr>
