@@ -59,6 +59,15 @@ ngOnInit() {
   this.cargarDoctores();
   this.cargarServicios();
 
+    // ✅ Agregar el listener después de que los servicios estén cargados
+  // Pero esperar a que servicios estén listos
+  const checkInterval = setInterval(() => {
+    if (this.servicios.length > 0) {
+      clearInterval(checkInterval);
+      this.setupServicioListener();
+    }
+  }, 100);
+
   this.route.params.subscribe(params => {
     if (params['id']) {
       this.esEdicion = true;
@@ -109,6 +118,40 @@ cargarServicios() {
     error: (error) => console.error('Error cargando servicios:', error)
   });
 }
+
+
+// Método para manejar la selección de servicio
+onServicioSeleccionado(servicio: any) {
+  if (servicio && servicio.precio_referencial) {
+    // Si el servicio tiene precio referencial, actualizar el campo total
+    this.ordenForm.patchValue({
+      total: servicio.precio_referencial
+    });
+    console.log(`💰 Precio referencial cargado: ${servicio.precio_referencial}`);
+  }
+}
+
+// ✅ OPCIONAL: Escuchar cambios en el servicio (para nueva orden)
+private setupServicioListener() {
+  this.ordenForm.get('servicio_id')?.valueChanges.subscribe(servicioId => {
+    if (servicioId && !this.esEdicion) {
+      const servicio = this.servicios.find(s => s.id === servicioId);
+      if (servicio && servicio.precio_referencial) {
+        this.ordenForm.patchValue({
+          total: servicio.precio_referencial
+        });
+      }
+    }
+  });
+}
+
+
+
+
+
+
+
+
 
 // orden-form.component.ts - Reemplazar el método cargarOrden()
 
