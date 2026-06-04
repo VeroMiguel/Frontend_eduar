@@ -13,19 +13,24 @@
       <div class="form-grid">
         <div class="form-group full-width">
           <label>Nombre completo <span class="required">*</span></label>
-          <input type="text" formControlName="nombre" class="form-control" placeholder="Ej: Dr. Juan Pérez">
+          <input type="text" formControlName="nombre" class="form-control" 
+                 [class.is-invalid]="doctorForm.get('nombre')?.invalid && doctorForm.get('nombre')?.touched"
+                 placeholder="Ej: Dr. Juan Pérez">
           <div *ngIf="doctorForm.get('nombre')?.invalid && doctorForm.get('nombre')?.touched" class="text-danger">
-            El nombre es requerido
+            <span *ngIf="doctorForm.get('nombre')?.hasError('required')">El nombre es requerido</span>
+            <span *ngIf="doctorForm.get('nombre')?.hasError('minlength')">El nombre debe tener al menos 3 caracteres</span>
           </div>
         </div>
 
-           <div class="form-group">
-          <label>Teléfono WhatsApp</label>
+        <div class="form-group">
+          <label>Teléfono WhatsApp <span class="required">*</span></label>
           <input type="tel" formControlName="telefono_whatsapp" class="form-control" 
+                 [class.is-invalid]="doctorForm.get('telefono_whatsapp')?.invalid && doctorForm.get('telefono_whatsapp')?.touched"
                  placeholder="51999888777">
-          <small class="text-muted">Código de país incluido</small>
-              <div *ngIf="doctorForm.get('telefono_whatsapp')?.invalid && doctorForm.get('telefono_whatsapp')?.touched" class="text-danger">
-            El numero es requerido
+          <small class="text-muted">Código de país incluido (solo números, 10-15 dígitos)</small>
+          <div *ngIf="doctorForm.get('telefono_whatsapp')?.invalid && doctorForm.get('telefono_whatsapp')?.touched" class="text-danger">
+            <span *ngIf="doctorForm.get('telefono_whatsapp')?.hasError('required')">⚠️ El número de teléfono es obligatorio</span>
+            <span *ngIf="doctorForm.get('telefono_whatsapp')?.hasError('invalidPhone')">⚠️ Ingrese un número válido (solo números, entre 10 y 15 dígitos)</span>
           </div>
         </div>
 
@@ -53,7 +58,6 @@
             </button>
             <span class="file-name">{{ archivoSeleccionado?.name || 'Ningún archivo seleccionado' }}</span>
           </div>
-          <!-- Cambia el texto de ayuda -->
           <small class="text-muted">Formatos: JPG, PNG, GIF, WEBP, HEIC. Máximo 15MB</small>
         </div>
       </div>

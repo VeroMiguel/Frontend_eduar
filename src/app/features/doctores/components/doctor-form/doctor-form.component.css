@@ -268,3 +268,23 @@ background: var(--surf, #ffffff);
     justify-content: center;
   }
 }
+/* Agrega esto al final de tu archivo CSS */
+.form-control.is-invalid {
+  border-color: #f43f5e;
+  background-color: rgba(244, 63, 94, 0.05);
+}
+
+.form-control.is-invalid:focus {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+}
+
+/* Mejora el mensaje de error */
+.text-danger {
+  color: #f43f5e;
+  font-size: 0.8rem;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
