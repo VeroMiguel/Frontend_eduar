@@ -29,7 +29,7 @@ export class DoctorFormComponent implements OnInit, OnDestroy {
       return { required: true };
     }
     // Validar que solo contenga números y tenga entre 10 y 15 dígitos
-    const phoneRegex = /^\d{10,15}$/;
+    const phoneRegex = /^\d{9,11}$/;
     if (!phoneRegex.test(value)) {
       return { invalidPhone: true };
     }
@@ -120,7 +120,7 @@ export class DoctorFormComponent implements OnInit, OnDestroy {
       return 'El número de teléfono es obligatorio';
     }
     if (control?.hasError('invalidPhone')) {
-      return 'Ingrese un número válido (solo números, 10-15 dígitos)';
+      return 'Ingrese un número válido (solo números, 9-11 dígitos)';
     }
     return '';
   }

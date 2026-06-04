@@ -27,10 +27,10 @@
           <input type="tel" formControlName="telefono_whatsapp" class="form-control" 
                  [class.is-invalid]="doctorForm.get('telefono_whatsapp')?.invalid && doctorForm.get('telefono_whatsapp')?.touched"
                  placeholder="51999888777">
-          <small class="text-muted">Código de país incluido (solo números, 10-15 dígitos)</small>
+          <small class="text-muted">Código de país incluido (solo números, 9-11 dígitos)</small>
           <div *ngIf="doctorForm.get('telefono_whatsapp')?.invalid && doctorForm.get('telefono_whatsapp')?.touched" class="text-danger">
             <span *ngIf="doctorForm.get('telefono_whatsapp')?.hasError('required')">⚠️ El número de teléfono es obligatorio</span>
-            <span *ngIf="doctorForm.get('telefono_whatsapp')?.hasError('invalidPhone')">⚠️ Ingrese un número válido (solo números, entre 10 y 15 dígitos)</span>
+            <span *ngIf="doctorForm.get('telefono_whatsapp')?.hasError('invalidPhone')">⚠️ Ingrese un número válido (solo números, entre 9 y 11 dígitos)</span>
           </div>
         </div>
 
